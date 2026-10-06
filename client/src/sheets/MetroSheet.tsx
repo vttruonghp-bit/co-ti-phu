@@ -45,7 +45,7 @@ function MetroChooser({ game, dispatch, id, extra }: MoveSheetProps & { id: stri
             <button
               type="button"
               className="btn btn-outline"
-              onClick={() => dispatch({ type: 'metro', playerId: id, destination: null })}
+              onClick={() => void dispatch({ type: 'metro', playerId: id, destination: null })}
             >
               Ở lại
             </button>
@@ -53,9 +53,10 @@ function MetroChooser({ game, dispatch, id, extra }: MoveSheetProps & { id: stri
               type="button"
               className="btn btn-blue btn-grow"
               disabled={dest === null}
-              onClick={() =>
-                dest !== null && dispatch({ type: 'metro', playerId: id, destination: dest })
-              }
+              onClick={() => {
+                if (dest !== null)
+                  void dispatch({ type: 'metro', playerId: id, destination: dest });
+              }}
             >
               {dest === null ? 'Chọn ô đích' : `Đi Metro · ${money(fee)}`}
             </button>

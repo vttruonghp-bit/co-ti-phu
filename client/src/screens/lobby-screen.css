@@ -1,0 +1,218 @@
+.lobby-screen .app-turn {
+  color: var(--teal);
+}
+
+.setup-body.lobby-body {
+  display: flex;
+  flex-direction: column;
+  padding-top: 12px;
+}
+
+/* Mã phòng to, dễ đọc cho người bên cạnh; nút mời bên phải */
+.lobby-code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1.5px dashed #9fd2c3;
+  border-radius: 14px;
+  background: var(--teal-soft);
+}
+
+.lobby-code-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lobby-code-main .eyebrow {
+  color: var(--teal);
+}
+
+.lobby-code-text {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  user-select: all;
+}
+
+.lobby-link {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+
+.lobby-share {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lobby-share .btn {
+  min-width: 92px;
+  min-height: 38px;
+}
+
+.lobby-body .setup-count {
+  margin-bottom: 12px;
+}
+
+.lobby-body .setup-count-btn {
+  height: 44px;
+}
+
+/* Số nhỏ hơn số người đang có: không chọn được */
+.lobby-body .setup-count-btn:disabled {
+  cursor: default;
+  color: #b6bfcc;
+}
+
+.lobby-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Ghế người khác: 2 cột, mỗi ghế 2 dòng để 6 người vừa một màn hình */
+.lobby-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lobby-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 8px 7px;
+  border: 2px solid var(--pc);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.lobby-seat.is-away {
+  border-style: dashed;
+}
+
+.lobby-seat-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pc);
+}
+
+.lobby-seat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lobby-seat-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lobby-seat-text b {
+  overflow: hidden;
+  font-size: 14.5px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lobby-seat-text span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ghế trống */
+.lobby-seat.is-empty {
+  --pc: #9aa4b5;
+  justify-content: space-between;
+  min-height: 62px;
+  border: 2px dashed #c9d2df;
+  background: #f8fafc;
+}
+
+.lobby-wait {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  animation: lobby-wait 1.6s ease-in-out infinite;
+}
+
+@keyframes lobby-wait {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-wait {
+    animation: none;
+  }
+}
+
+/* Chấm kết nối: xanh đang mở trang, xám mất kết nối */
+.lobby-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #b6bfcc;
+}
+
+.lobby-dot.is-on {
+  background: #1fb57f;
+  box-shadow: 0 0 0 3px rgb(31 181 127 / 18%);
+}
+
+.box.lobby-swapped {
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.lobby-confirm {
+  margin: 0 0 8px;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* "Rời phòng" luôn trên một dòng, nút Bắt đầu lấy phần còn lại (vừa một dòng ở màn 360px) */
+.lobby-screen .setup-footer .btn {
+  padding-inline: 10px;
+  font-size: 15px;
+}
+
+.lobby-screen .setup-footer .btn:not(.btn-grow) {
+  flex: 0 0 auto;
+  padding-inline: 12px;
+  white-space: nowrap;
+}

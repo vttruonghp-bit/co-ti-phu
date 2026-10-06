@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   BOARD,
   BOARD_SIZE,
@@ -30,6 +30,7 @@ import {
   signed,
   tileName,
 } from '../game/format';
+import { useMeId } from '../online/mode';
 import { colorOf } from '../theme';
 import type { SheetProps } from './types';
 import './manage-sheet.css';
@@ -98,7 +99,8 @@ export function ManageSheet({
 }: ManageSheetProps) {
   const p = playerById(game, playerId)!;
   const [ops, setOps] = useState<ManageOp[]>([]);
-  const [settling, setSettling] = useState(false);
+  // Đang chờ thao tác trước xong (online phải đợi máy chủ): chặn bấm lần hai.
+  const busy = useRef(false);
   const draft = useMemo(
     () =>
       buildDraft(game, playerId, mode === 'view' ? [] : ops, mode === 'debt' ? 'debt' : 'manage'),
@@ -107,28 +109,31 @@ export function ManageSheet({
   const pd = game.pending;
   const debt = mode === 'debt' && pd.type === 'pay' && pd.playerId === playerId ? pd : null;
 
-  // Thanh lý xong thì trả ngay ở lần vẽ kế tiếp, khi ván đã có số tiền mới.
-  useEffect(() => {
-    if (!settling) return;
-    setSettling(false);
-    if (debt && p.cash >= debt.total && dispatch({ type: 'pay', playerId }) === null) onClose();
-  }, [settling, debt, p.cash, dispatch, playerId, onClose]);
-
-  const confirm = () => {
-    if (dispatch({ type: 'manage', playerId, ops: draft.ops }) === null) onClose();
-  };
-
-  const settle = () => {
-    if (draft.ops.length === 0) {
-      if (dispatch({ type: 'pay', playerId }) === null) onClose();
-      return;
+  const once = (run: () => Promise<void>) => async () => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      await run();
+    } finally {
+      busy.current = false;
     }
-    if (dispatch({ type: 'manage', playerId, ops: draft.ops }) !== null) return;
-    setOps([]);
-    setSettling(true);
   };
+
+  const confirm = once(async () => {
+    if ((await dispatch({ type: 'manage', playerId, ops: draft.ops })) === null) onClose();
+  });
+
+  // Thanh lý theo dự thảo rồi trả luôn: lệnh trả chỉ gửi khi thanh lý đã xong.
+  const settle = once(async () => {
+    if (draft.ops.length > 0) {
+      if ((await dispatch({ type: 'manage', playerId, ops: draft.ops })) !== null) return;
+      setOps([]);
+    }
+    if ((await dispatch({ type: 'pay', playerId })) === null) onClose();
+  });
 
   const offTurn = game.players[game.current]?.id !== playerId;
+  const online = useMeId() !== null;
   // Bán Phố Cổ trong dự thảo thì quyền Người thủ đô đang giữ hết hiệu lực.
   const losesCapital =
     p.heldCards.some((h) => h.kind === 'taxWaiver') &&
@@ -167,8 +172,8 @@ export function ManageSheet({
       }
     >
       <div className="manage-body">
-        {/* Nợ ngoài lượt: người giữ máy (người giữ lượt) phải đưa máy cho người nợ. */}
-        {debt && offTurn && (
+        {/* Nợ ngoài lượt khi chơi chung một máy: người giữ máy phải đưa máy cho người nợ. */}
+        {debt && offTurn && !online && (
           <p
             className="handoff"
             style={{ background: colorOf(p.color).soft, color: colorOf(p.color).main }}

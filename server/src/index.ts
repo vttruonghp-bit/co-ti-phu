@@ -1,31 +1,25 @@
-import { createServer } from 'node:http';
-import { Server } from 'socket.io';
-import { BOARD_SIZE, MAX_PLAYERS, MIN_PLAYERS } from '@cotiphu/shared';
+import { DEV_ORIGINS, createAppServer } from './app';
 
 const PORT = Number(process.env.PORT ?? 3001);
 
-const httpServer = createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true }));
-    return;
-  }
-  res.writeHead(404);
-  res.end();
+// CLIENT_ORIGIN: thêm trang ở cổng khác được kết nối, cách nhau bằng dấu phẩy.
+const extraOrigins = (process.env.CLIENT_ORIGIN ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const app = createAppServer({
+  clientDist: process.env.CLIENT_DIST || undefined,
+  corsOrigins: [...DEV_ORIGINS, ...extraOrigins],
 });
 
-const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173' },
-});
-
-io.on('connection', (socket) => {
-  socket.emit('server:hello', {
-    boardSize: BOARD_SIZE,
-    minPlayers: MIN_PLAYERS,
-    maxPlayers: MAX_PLAYERS,
-  });
-});
-
-httpServer.listen(PORT, () => {
+app.httpServer.listen(PORT, () => {
   console.log(`Server Cờ tỉ phú chạy ở cổng ${PORT}`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => {
+    setTimeout(() => process.exit(0), 2000).unref();
+    void app.close().then(() => process.exit(0));
+  });
+}

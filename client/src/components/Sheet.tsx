@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import type { GameState } from '@cotiphu/shared';
-import { money } from '../game/format';
+import { money, playerById } from '../game/format';
+import { useMeId } from '../online/mode';
 import { colorOf } from '../theme';
 import './sheet.css';
 
@@ -29,19 +30,12 @@ export function Sheet({ game, icon, title, subtitle, footer, children, label, wh
       document.body.style.overflow = prev;
     };
   }, []);
-  const shown = who && game?.players.find((p) => p.id === who.playerId);
-  const cur = shown ?? (game ? game.players[game.current] : null);
-  const curText = shown ? who!.text : `Lượt ${cur?.name}`;
   return (
     <div className="sheet-backdrop">
       <section className="sheet" role="dialog" aria-modal="true" aria-label={label ?? title}>
         <header className="app-header">
           <h1 className="app-title">CỜ TỶ PHÚ</h1>
-          {cur && game?.pending.type !== 'ended' && (
-            <span className="app-turn" style={{ color: colorOf(cur.color).main }}>
-              {curText} · {money(cur.cash)}
-            </span>
-          )}
+          {game && game.pending.type !== 'ended' && <TurnLine game={game} who={who} />}
         </header>
         <div className="sheet-card">
           <div className="sheet-head">
@@ -56,6 +50,34 @@ export function Sheet({ game, icon, title, subtitle, footer, children, label, wh
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * Đầu màn: "Lượt X · tiền của X". Online thêm tiền của chính mình: "Lượt X · Bạn 480Đ",
+ * hoặc "Lượt của bạn · 480Đ".
+ */
+export function TurnLine({ game, who }: { game: GameState; who?: SheetProps['who'] }) {
+  const meId = useMeId();
+  const shown = who && playerById(game, who.playerId);
+  const cur = shown ?? game.players[game.current]!;
+  const text = shown ? who!.text : `Lượt ${cur.name}`;
+  const me = playerById(game, meId);
+  const curColor = colorOf(cur.color).main;
+  if (!me || me.id === cur.id) {
+    const mine = me && !shown;
+    return (
+      <span className="app-turn" style={{ color: curColor }}>
+        {mine ? 'Lượt của bạn' : text} · {money(cur.cash)}
+      </span>
+    );
+  }
+  return (
+    <span className="app-turn">
+      <span style={{ color: curColor }}>{text}</span>
+      <span className="app-turn-sep"> · </span>
+      <span style={{ color: colorOf(me.color).main }}>Bạn {money(me.cash)}</span>
+    </span>
   );
 }
 

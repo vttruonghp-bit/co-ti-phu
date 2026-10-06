@@ -1,0 +1,133 @@
+/* Hồ sơ của mình: quân + ô tên trên một dòng, dải 8 màu + kí hiệu ở dòng dưới */
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px 10px;
+  border: 2px solid var(--pc);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.profile-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pc);
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-token {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-name {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.profile-name[aria-invalid='true'] {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.profile-name:focus {
+  border-color: var(--pc);
+  outline: 2px solid color-mix(in srgb, var(--pc) 30%, transparent);
+  outline-offset: 0;
+}
+
+/* Cả dải màu + tên kí hiệu là một nút mở bảng chọn */
+.profile-look {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--pc-soft);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-look:active {
+  transform: scale(0.99);
+}
+
+.profile-dots {
+  display: flex;
+  flex: 0 1 172px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 116px;
+  height: 16px;
+}
+
+.profile-dots > span {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.profile-dots > .is-on {
+  width: 15px;
+  height: 15px;
+  box-shadow:
+    0 0 0 1.5px #fff,
+    0 0 0 3px var(--ink);
+}
+
+.profile-dots > .is-taken {
+  opacity: 0.2;
+}
+
+.profile-look-name {
+  flex: 1 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.profile-change {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--pc);
+  font-size: 12.5px;
+  font-weight: 800;
+}

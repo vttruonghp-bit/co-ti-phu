@@ -365,3 +365,36 @@
   padding-inline: 6px;
   font-size: 15px;
 }
+
+/* Online: "Đang chờ Minh …" kèm quân của người đó */
+.handoff.is-waiting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.handoff-away {
+  color: var(--muted);
+}
+
+/* Người chơi online đang mất kết nối: chấm xám ở góc quân */
+.player-chip-token {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.offline-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #9aa4b5;
+}
+
+.player-chip.is-me {
+  border-width: 2px;
+}

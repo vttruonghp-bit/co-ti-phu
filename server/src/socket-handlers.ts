@@ -1,7 +1,8 @@
 /**
  * Nối các sự kiện Socket.IO với danh sách phòng. Mỗi socket giữ tối đa một ghế,
- * mỗi ghế chỉ một socket (socket mới thay socket cũ). Sau mỗi thay đổi, cả phòng
- * nhận `room:state` mới; phản hồi (ack) luôn đi trước trạng thái.
+ * mỗi ghế chỉ một socket: socket mới thay socket cũ, socket cũ lặng lẽ bị tách khỏi phòng
+ * (không gửi `room:closed`, vì trang cũ sẽ xóa vé dùng chung trong trình duyệt).
+ * Sau mỗi thay đổi, cả phòng nhận `room:state` mới; phản hồi (ack) luôn đi trước trạng thái.
  */
 import type { Server, Socket } from 'socket.io';
 import type { ClientToServerEvents, Rng, ServerToClientEvents } from '@cotiphu/shared';
@@ -20,6 +21,8 @@ import { roomView } from './view';
 export interface SocketData {
   /** Ghế socket đang giữ, null khi chưa vào phòng nào. */
   seat: { code: string; playerId: string } | null;
+  /** Ghế của socket này đã được mở ở trang khác. */
+  replaced: boolean;
 }
 
 type NoEvents = Record<string, never>;
@@ -30,9 +33,13 @@ type RawSocket = { on(event: string, fn: (...args: unknown[]) => void): void };
 
 /** Lí do đóng phòng gửi kèm `room:closed`. */
 export const CLOSED_HOST_LEFT = 'Chủ phòng đã rời phòng';
-export const CLOSED_REPLACED = 'Ghế của bạn vừa được mở ở một trang khác';
 
-const NOT_SEATED = 'Bạn chưa vào phòng nào';
+export const NOT_SEATED = 'Bạn chưa vào phòng nào';
+export const SEAT_OPENED_ELSEWHERE =
+  'Ghế của bạn đang mở ở trang khác. Tải lại trang để chơi ở đây.';
+
+const notSeated = (socket: IoSocket) =>
+  fail(socket.data.replaced ? SEAT_OPENED_ELSEWHERE : NOT_SEATED);
 
 /** Kênh Socket.IO của phòng (đặt tiền tố để không trùng mã socket). */
 const channel = (code: string) => `phong:${code}`;
@@ -72,11 +79,12 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
       const old = socketOf(seat.socketId);
       if (old) {
         detach(old, room);
-        old.emit('room:closed', CLOSED_REPLACED);
+        old.data.replaced = true;
       }
       rooms.setSocket(room, seat, socket.id);
     }
     socket.data.seat = { code: room.code, playerId: seat.id };
+    socket.data.replaced = false;
     void socket.join(channel(room.code));
   }
 
@@ -157,7 +165,7 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
 
     'room:profile': (socket, req, changed) => {
       const at = seated(socket);
-      if (!at) return fail(NOT_SEATED);
+      if (!at) return notSeated(socket);
       const profile = parseProfile(req);
       if (!profile.ok) return profile;
       const res = rooms.setProfile(at.room, at.seat, profile.value);
@@ -167,7 +175,7 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
 
     'room:capacity': (socket, req, changed) => {
       const at = seated(socket);
-      if (!at) return fail(NOT_SEATED);
+      if (!at) return notSeated(socket);
       const capacity = parseCapacity(req);
       if (!capacity.ok) return capacity;
       const res = rooms.setCapacity(at.room, at.seat, capacity.value);
@@ -177,7 +185,7 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
 
     'room:start': (socket, _req, changed) => {
       const at = seated(socket);
-      if (!at) return fail(NOT_SEATED);
+      if (!at) return notSeated(socket);
       const res = rooms.start(at.room, at.seat, rng);
       if (res.ok) changed.add(at.room);
       return res;
@@ -185,7 +193,8 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
 
     'room:leave': (socket, _req, changed) => {
       const at = seated(socket);
-      if (!at) return ok(undefined);
+      // Chưa vào phòng nào thì coi như đã rời; ghế đang mở ở trang khác thì không rời thay được.
+      if (!at) return socket.data.replaced ? notSeated(socket) : ok(undefined);
       if (at.room.phase === 'playing') return fail('Đang trong ván, muốn rời thì dùng Đầu hàng');
       release(socket, changed);
       return ok(undefined);
@@ -193,7 +202,7 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
 
     'game:action': (socket, req, changed) => {
       const at = seated(socket);
-      if (!at) return fail(NOT_SEATED);
+      if (!at) return notSeated(socket);
       const action = parseAction(req, at.seat.id);
       if (!action.ok) return action;
       const res = rooms.act(at.room, at.seat, action.value, rng);
@@ -204,6 +213,7 @@ export function attachRoomHandlers(io: IoServer, rooms: Rooms, rng: Rng): void {
 
   io.on('connection', (socket) => {
     socket.data.seat = null;
+    socket.data.replaced = false;
     for (const [event, handler] of Object.entries(handlers) as [string, Handler][]) {
       (socket as unknown as RawSocket).on(event, (...args) => {
         const last = args[args.length - 1];

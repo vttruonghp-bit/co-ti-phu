@@ -18,7 +18,10 @@ export function getSocket(): GameSocket {
 }
 
 /** Gửi một yêu cầu rồi chờ máy chủ trả lời; null nếu quá thời gian. */
-export function request<R>(send: (done: (res: R) => void) => void, ms = WAIT_MS): Promise<R | null> {
+export function request<R>(
+  send: (done: (res: R) => void) => void,
+  ms = WAIT_MS,
+): Promise<R | null> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), ms);
     send((res) => {

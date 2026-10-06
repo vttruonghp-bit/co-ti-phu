@@ -18,6 +18,7 @@ import { Dice } from '../components/Dice';
 import { Sheet, SheetGlyph } from '../components/Sheet';
 import { TokenIcon } from '../components/TokenIcon';
 import { levelText, money, numbered, playerById, signed, tileName } from '../game/format';
+import { useMeId } from '../online/mode';
 import { colorOf } from '../theme';
 import type { CardEvent, HighwayEvent, SheetProps } from './types';
 import './card-sheet.css';
@@ -51,6 +52,7 @@ export function CardSheet({
   const draws = found.includes(event) ? found : [event];
   const k = draws.indexOf(event);
   const result = drawResults(game, previous, draws)[k]!;
+  const online = useMeId() !== null;
   // Lá thẻ kế tiếp hiện trong cùng màn: cuộn về đầu để thấy lá mới.
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -69,7 +71,7 @@ export function CardSheet({
     <div className="draw-footer">
       <p className="draw-next">
         <span className="eyebrow">Tiếp theo</span>
-        <span>{nextText(game, draws, k)}</span>
+        <span>{nextText(game, draws, k, online)}</span>
       </p>
       <button
         type="button"
@@ -342,7 +344,7 @@ function addCredits(
 }
 
 /** Việc kế tiếp sau khi bấm Tiếp tục: lần rút sau, hoặc việc ván đang chờ. */
-function nextText(game: GameState, draws: Draw[], k: number): string {
+function nextText(game: GameState, draws: Draw[], k: number, online: boolean): string {
   const next = draws[k + 1];
   if (next) {
     const name = playerById(game, next.playerId)?.name ?? '';
@@ -365,7 +367,7 @@ function nextText(game: GameState, draws: Draw[], k: number): string {
     case 'pay': {
       const p = playerById(game, pd.playerId)!;
       if (p.cash < pd.total) {
-        return p.id !== game.players[game.current]!.id
+        return p.id !== game.players[game.current]!.id && !online
           ? `Chuyển máy cho ${p.name}: ${p.name} thiếu tiền trả ${money(pd.total)}, vào Xử lý nợ.`
           : `${p.name} thiếu tiền trả ${money(pd.total)}: vào Xử lý nợ.`;
       }
