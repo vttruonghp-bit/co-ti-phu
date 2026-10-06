@@ -4,6 +4,7 @@ import {
   HOTEL_LEVEL,
   LOG_VISIBLE_ENTRIES,
   UTILITY_MULTIPLIERS,
+  getCard,
   redeemCost,
   type Action,
   type GameState,
@@ -25,6 +26,7 @@ import {
 import { debtorOf } from '../game/draft';
 import { HOT_SEAT, PlayModeContext, type PlayMode } from '../online/mode';
 import { AppearanceSheet } from '../sheets/AppearanceSheet';
+import { CardFan } from '../sheets/CardFan';
 import { CardSheet } from '../sheets/CardSheet';
 import { ChooseTileSheet } from '../sheets/ChooseTileSheet';
 import { GameOverSheet } from '../sheets/GameOverSheet';
@@ -92,19 +94,6 @@ function canManage(s: GameState, p: PlayerState): boolean {
   );
 }
 
-/** In đậm tên người chơi trong một dòng chữ. */
-function withName(text: string, name: string): ReactNode {
-  const i = text.indexOf(name);
-  if (i < 0) return text;
-  return (
-    <>
-      {text.slice(0, i)}
-      <b>{name}</b>
-      {text.slice(i + name.length)}
-    </>
-  );
-}
-
 interface MainAction {
   label: string;
   tone: string;
@@ -124,6 +113,7 @@ export function GameScreen({
   const [viewTile, setViewTile] = useState<number | null>(null);
   const [reveals, setReveals] = useState(() => revealsOf(view));
   const [error, setError] = useState<string | null>(null);
+  const [picked, setPicked] = useState<object | null>(null);
 
   const cur = game.players[game.current]!;
   const waiter = waitingPlayer(game);
@@ -213,7 +203,21 @@ export function GameScreen({
   const reveal = reveals[0];
   let sheet: ReactNode = null;
   // Thẻ làm phá sản vẫn hiện trước, rồi mới tới màn kết thúc.
-  if (reveal) {
+  // Thẻ của người cầm máy: chọn 1 lá trong quạt bài trước (chỉ để xem, bộ luật đã rút sẵn).
+  const fan =
+    reveal &&
+    reveal.event.type === 'card' &&
+    picked !== reveal.event &&
+    (!online || reveal.event.playerId === me.id)
+      ? reveal.event
+      : null;
+  if (reveal && fan) {
+    const deck = getCard(fan.cardId).deck;
+    const d = (reveal.previous ?? reveal.game).decks[deck] as unknown;
+    const count =
+      (typeof d === 'number' ? d : Array.isArray(d) ? d.length : 0) + (reveal.previous ? 0 : 1);
+    sheet = <CardFan deck={deck} count={Math.max(1, count)} onPick={() => setPicked(fan)} />;
+  } else if (reveal) {
     sheet = (
       <CardSheet
         {...sheetProps}
@@ -321,54 +325,29 @@ export function GameScreen({
   // Online, khi ván chờ người khác: dòng "Đang chờ Minh …" thay cho "Chuyển máy cho …".
   const othersText = online && !myMove ? waitingOther(game, waiter) : null;
 
+  // Người cầm máy này cần thấy lời nhắc chuyển máy / chờ người khác.
+  const notice =
+    !online && me.id !== cur.id && playing
+      ? `Chuyển máy cho ${me.name}: ${waitingText(game, me)}`
+      : othersText && playing
+        ? `${othersText}${offline.has(waiter.id) ? ' · mất kết nối' : ''}`
+        : online && myMove && me.id !== cur.id && playing
+          ? `Ván đang chờ bạn (ngoài lượt của ${cur.name}).`
+          : null;
+
   return (
     <PlayModeContext.Provider value={mode}>
-      <main className="phone game-screen" style={accentStyle}>
+      <main className="land game-screen" style={accentStyle}>
         {/* Khi màn phụ đang mở, màn chính phía sau không bấm hay đọc tới được. */}
-        <div className="game-main" inert={sheet !== null}>
-          <header className="app-header">
-            <span className="app-brand">
-              {onHome && (
-                <button type="button" className="app-home" onClick={onHome} aria-label="Về màn đầu">
-                  <span aria-hidden="true">‹</span>
-                </button>
-              )}
-              <h1 className="app-title">CỜ TỶ PHÚ</h1>
-            </span>
-            <TurnLine game={game} />
-          </header>
-
-          {!online && me.id !== cur.id && playing && (
-            <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
-              Chuyển máy cho <b>{me.name}</b>: {waitingText(game, me)}
-            </p>
-          )}
-          {othersText && playing && (
-            <p
-              className="handoff is-waiting"
-              role="status"
-              style={{ background: accent.soft, color: accent.main }}
-            >
-              <TokenIcon icon={waiter.icon} color={waiter.color} size={20} />
-              <span>
-                {withName(othersText, waiter.name)}
-                {offline.has(waiter.id) && <span className="handoff-away"> · mất kết nối</span>}
-              </span>
-            </p>
-          )}
-          {online && myMove && me.id !== cur.id && playing && (
-            <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
-              Ván đang chờ <b>bạn</b> (ngoài lượt của {cur.name}).
-            </p>
-          )}
-
-          <PlayersBar game={game} meId={online?.meId ?? null} offline={offline} />
-
-          <Board
-            game={game}
-            focus={viewTile ?? waiter.position}
-            onTileClick={(i) => setViewTile((v) => (v === i ? null : i))}
-          >
+        <div className="land-main" inert={sheet !== null}>
+          <div className="land-stage">
+            <div className="iso">
+              <Board
+                game={game}
+                focus={viewTile ?? waiter.position}
+                onTileClick={(i) => setViewTile((v) => (v === i ? null : i))}
+              />
+            </div>
             <CenterPanel
               game={game}
               me={waiter}
@@ -380,39 +359,49 @@ export function GameScreen({
               diceColor={rollerColor}
               rollKey={actions}
               formula={formula}
-            />
-          </Board>
-
-          <div className="btn-row action-bar">
-            {main ? (
-              <button
-                type="button"
-                className={`btn btn-grow ${main.tone}`}
-                disabled={busy > 0}
-                aria-busy={busy > 0}
-                onClick={main.run}
-              >
-                {main.label}
-              </button>
-            ) : (
-              <button type="button" className="btn btn-grow" disabled>
-                {othersText ? `Chờ ${waiter.name}…` : waitingText(game, me)}
-              </button>
-            )}
-            <button
-              type="button"
-              className={`btn ${secondary.tone}`}
-              disabled={busy > 0 && myMove && (pd.type === 'buy' || pd.type === 'upgrade')}
-              onClick={secondary.run}
+              notice={notice}
             >
-              {secondary.label}
-            </button>
+              <div className="btn-row action-bar">
+                {main ? (
+                  <button
+                    type="button"
+                    className={`btn btn-grow ${main.tone}`}
+                    disabled={busy > 0}
+                    aria-busy={busy > 0}
+                    onClick={main.run}
+                  >
+                    {main.label}
+                  </button>
+                ) : (
+                  <button type="button" className="btn btn-grow" disabled>
+                    {othersText ? `Chờ ${waiter.name}…` : 'Đang chờ…'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={`btn ${secondary.tone}`}
+                  disabled={busy > 0 && myMove && (pd.type === 'buy' || pd.type === 'upgrade')}
+                  onClick={secondary.run}
+                >
+                  {secondary.label}
+                </button>
+              </div>
+            </CenterPanel>
+            <PlayerFrames game={game} meId={online?.meId ?? null} offline={offline} />
           </div>
 
-          <LogPanel game={game} />
-
-          {danger}
-          <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
+          <aside className="land-side">
+            <header className="land-head">
+              {onHome && (
+                <button type="button" className="app-home" onClick={onHome} aria-label="Về màn đầu">
+                  <span aria-hidden="true">‹</span>
+                </button>
+              )}
+              <TurnLine game={game} />
+            </header>
+            <LogPanel game={game} />
+            {danger}
+          </aside>
         </div>
 
         {sheet}
@@ -487,54 +476,61 @@ export function waitingText(s: GameState, me: PlayerState): string {
   }
 }
 
-interface PlayersBarProps {
+interface PlayerFramesProps {
   game: GameState;
-  /** Online: người cầm máy này (viền đậm màu của mình). */
+  /** Online: người cầm máy này. */
   meId: string | null;
-  /** Online: những người đang mất kết nối (chấm xám trên quân). */
+  /** Online: những người đang mất kết nối. */
   offline: ReadonlySet<string>;
 }
 
-function PlayersBar({ game, meId, offline }: PlayersBarProps) {
+const SLOTS = ['tl', 'tr', 'br', 'bl', 'tl', 'tr'] as const;
+
+/** Khung người chơi ở 4 góc màn (ván 5–6 người: thêm 1 khung ở 2 góc trên). */
+function PlayerFrames({ game, meId, offline }: PlayerFramesProps) {
   const cur = game.players[game.current]!;
-  const others = game.players.filter((p) => p.id !== cur.id);
   return (
-    <section className="players" aria-label="Người chờ lượt">
-      <p className="eyebrow">Người chờ lượt</p>
-      <div className={`players-grid${others.length <= 2 ? ' is-wide' : ''}`}>
-        {others.map((p) => {
-          const c = colorOf(p.color);
-          const mine = p.id === meId;
-          const away = offline.has(p.id);
-          return (
-            <div
-              key={p.id}
-              className={`player-chip${p.status !== 'active' ? ' is-out' : ''}${mine ? ' is-me' : ''}`}
-              style={{
-                borderColor: mine ? c.main : `color-mix(in srgb, ${c.main} 35%, #dfe5ee)`,
-              }}
-            >
-              <span className="player-chip-token">
-                <TokenIcon icon={p.icon} color={p.color} size={18} />
-                {away && <span className="offline-dot" />}
-              </span>
-              <span className="player-chip-text">
-                <span className="player-chip-top">
-                  <b title={p.name}>{p.name}</b>
-                  <span>{money(p.cash)}</span>
+    <>
+      {(['tl', 'tr', 'br', 'bl'] as const).map((slot) => (
+        <div key={slot} className={`frames frames-${slot}`}>
+          {game.players.map((p, i) => {
+            if (SLOTS[i] !== slot) return null;
+            const c = colorOf(p.color);
+            const props = game.tiles.filter((t, k) => t?.owner === p.id && BOARD[k]!.kind === 'property');
+            const houses = props.reduce((n, t) => n + (t!.level < HOTEL_LEVEL ? t!.level : 0), 0);
+            const hotels = props.filter((t) => t!.level >= HOTEL_LEVEL).length;
+            return (
+              <div
+                key={p.id}
+                className={`frame${p.id === cur.id ? ' is-turn' : ''}${p.status !== 'active' ? ' is-out' : ''}`}
+                style={{ ['--pc' as string]: c.main }}
+              >
+                <span className="frame-avatar">
+                  <img src={`/assets/avatar-${String((p.icon % 10) + 1).padStart(2, '0')}.png`} alt="" />
+                  <span className="frame-token">
+                    <TokenIcon icon={p.icon} color={p.color} size={16} />
+                  </span>
+                  {offline.has(p.id) && <span className="offline-dot" />}
                 </span>
-                {/* "đất" như hình mẫu (gồm cả ga, nhà máy) để vừa 3 cột ở màn 360px */}
-                <span className="player-chip-sub">
-                  {away
-                    ? 'mất kết nối'
-                    : `${assetCount(game, p.id)} đất · ${p.heldCards.length} thẻ`}
+                <span className="frame-text">
+                  <b className="frame-name">
+                    {p.name}
+                    {p.id === meId ? ' (bạn)' : ''}
+                  </b>
+                  <span className="frame-cash">{money(p.cash)}</span>
+                  <span className="frame-stats">
+                    <span title="Tài sản">🏠{assetCount(game, p.id)}</span>
+                    <span title="Nhà">🏘{houses}</span>
+                    <span title="Khách sạn">🏨{hotels}</span>
+                    <span title="Thẻ">🃏{p.heldCards.length}</span>
+                  </span>
                 </span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -552,6 +548,10 @@ interface CenterPanelProps {
   diceColor: string;
   rollKey: number;
   formula: PayFormula | null;
+  /** Lời nhắc chuyển máy / đang chờ người khác. */
+  notice: string | null;
+  /** Các nút thao tác. */
+  children: ReactNode;
 }
 
 interface PayFormula {
@@ -660,11 +660,6 @@ function cashAfter(game: GameState, me: PlayerState): number | null {
   return null;
 }
 
-/** Cấp nhà như hình mẫu: "2 / 4 nhà". */
-function levelLabel(level: number): string {
-  return level > 0 && level < HOTEL_LEVEL ? `${level} / 4 nhà` : levelText(level);
-}
-
 function CenterPanel({
   game,
   me,
@@ -676,11 +671,11 @@ function CenterPanel({
   diceColor,
   rollKey,
   formula,
+  notice,
+  children,
 }: CenterPanelProps) {
   const t = BOARD[tile]!;
-  // Online, người ván đang chờ là chính mình: gọi là "bạn" trong các dòng chữ.
   const you = mine ? { ...me, name: 'bạn' } : me;
-  // Cách tính khoản đang chờ trả chỉ hiện ở ô đang đứng.
   const pay = viewing ? null : formula;
   const st = game.tiles[tile];
   const owner = playerById(game, st?.owner);
@@ -696,40 +691,21 @@ function CenterPanel({
 
   return (
     <div className="center">
-      <div className="center-turn">
-        <span className="player-chip-token">
-          <TokenIcon icon={me.icon} color={me.color} size={30} blink />
-          {away && <span className="offline-dot" />}
+      <div className="center-head">
+        <span className="center-eyebrow">
+          {viewing ? 'Ô đang xem · chạm lại để đóng' : 'Ô hiện tại'} ·{' '}
+          {mine
+            ? isTurn
+              ? 'lượt của bạn'
+              : 'ván chờ bạn'
+            : isTurn
+              ? `lượt ${me.name}`
+              : `chờ ${me.name}`}
+          {away && ' · mất kết nối'}
         </span>
-        <div className="center-turn-main">
-          <span className="center-turn-label">
-            {mine
-              ? isTurn
-                ? 'Lượt của bạn'
-                : 'Ván đang chờ bạn'
-              : isTurn
-                ? `Lượt của ${me.name}`
-                : `Đang chờ ${me.name}`}
-            {away && ' · mất kết nối'}
-          </span>
-          <span className="center-turn-cash">{money(me.cash)}</span>
-        </div>
-        <div className="center-turn-side">
-          <span>{assetCount(game, me.id)} tài sản</span>
-          <span>{me.heldCards.length} thẻ</span>
-        </div>
-      </div>
-
-      <div className="center-tile">
-        <div className="center-tile-head">
-          <span className="eyebrow">
-            {viewing ? 'Ô đang xem · chạm lại để đóng' : 'Ô đang đứng'}
-          </span>
-          {dice && !viewing && (
-            <Dice values={dice} color={diceColor} size={24} rolling={rolling} key={rollKey} />
-          )}
-        </div>
         <h2 className="center-tile-name">{t.name}</h2>
+      </div>
+      <div className="center-body">
         <p
           className="center-tile-owner"
           style={owner ? { color: colorOf(owner.color).main } : undefined}
@@ -737,40 +713,57 @@ function CenterPanel({
           {tileDescription(game, tile)}
           {st?.mortgaged ? ' · đang cắm' : ''}
         </p>
-        {owner && (
-          <div className="center-info">
-            <div>
-              <span className="eyebrow">{t.kind === 'property' ? 'Cấp nhà' : 'Loại'}</span>
-              <b>
-                {t.kind === 'property'
-                  ? levelLabel(st!.level)
-                  : t.kind === 'station'
-                    ? 'Ga tàu'
-                    : 'Nhà máy'}
-              </b>
-            </div>
-            <div className="right">
-              <span className="eyebrow">{pay?.label ?? 'Tiền thuê'}</span>
-              <b>{pay?.text ?? rentText(game, tile)}</b>
-            </div>
-          </div>
+        {t.kind === 'property' ? (
+          <table className="rent-table">
+            <thead>
+              <tr>
+                <th>Trống</th>
+                <th>1 nhà</th>
+                <th>2 nhà</th>
+                <th>3 nhà</th>
+                <th>4 nhà</th>
+                <th>KS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {t.rents.map((r, k) => (
+                  <td key={k} className={owner && st!.level === k ? 'is-now' : ''}>
+                    {r}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          owner && (
+            <p className="center-rent">
+              {pay?.label ?? 'Tiền thuê'}: <b>{pay?.text ?? rentText(game, tile)}</b>
+            </p>
+          )
         )}
-        <div className="center-foot">
-          {after !== null && (
-            <div className="center-after">
-              <span>Tiền của {you.name} sau giao dịch</span>
-              <b>
-                {money(me.cash)} <span aria-hidden="true">→</span>{' '}
-                <span className={after < me.cash ? 'down' : 'up'}>
-                  {after < 0 ? `thiếu ${money(-after)}` : money(after)}
-                </span>
-              </b>
-            </div>
-          )}
-          <p className="center-wait">
-            {mine ? capitalize(waitingText(game, you)) : waitingText(game, me)}
+        {t.kind === 'property' && pay && (
+          <p className="center-rent">
+            {pay.label}: <b>{pay.text}</b>
           </p>
+        )}
+        <div className="center-row">
+          {dice && !viewing && (
+            <Dice values={dice} color={diceColor} size={26} rolling={rolling} key={rollKey} />
+          )}
+          {after !== null && (
+            <span className="center-after">
+              Tiền {you.name}: {money(me.cash)} →{' '}
+              <b className={after < me.cash ? 'down' : 'up'}>
+                {after < 0 ? `thiếu ${money(-after)}` : money(after)}
+              </b>
+            </span>
+          )}
         </div>
+        <p className="center-wait">
+          {notice ?? (mine ? capitalize(waitingText(game, you)) : waitingText(game, me))}
+        </p>
+        {children}
       </div>
     </div>
   );

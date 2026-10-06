@@ -197,20 +197,29 @@ export function Board({ game, focus, onTileClick, children }: BoardProps) {
                 style={{ background: ownerColor?.main ?? 'transparent' }}
               />
             )}
-            <span className={tight ? 'tile-name tile-name-tight' : 'tile-name'}>{name}</span>
-            {hotel && <span className="sparkle" aria-hidden="true" />}
-            {(here.length > 0 || !corner) && (
-              <Tokens
-                players={here}
-                currentId={currentId}
-                walkerId={walk?.playerId}
-                corner={corner}
-              />
-            )}
+            <span className="tile-up">
+              {tile.kind === 'property' && st && st.level > 0 && (
+                <img
+                  className="tile-house"
+                  src={hotel ? '/assets/khach-san.png' : `/assets/nha-${st.level}.png`}
+                  alt=""
+                />
+              )}
+              <span className={tight ? 'tile-name tile-name-tight' : 'tile-name'}>{name}</span>
+              {'price' in tile && !owner && <span className="tile-price">{tile.price}Đ</span>}
+              {here.length > 0 && (
+                <Tokens
+                  players={here}
+                  currentId={currentId}
+                  walkerId={walk?.playerId}
+                  corner={corner}
+                />
+              )}
+            </span>
           </button>
         );
       })}
-      <div className="board-center">{children}</div>
+      {children && <div className="board-center">{children}</div>}
     </div>
   );
 }
