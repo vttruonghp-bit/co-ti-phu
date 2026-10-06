@@ -15,7 +15,7 @@ export const mortgageValue = (price: number): number => percentOf(price, MORTGAG
 /** Tiền phải trả để chuộc ô đang cắm (55% giá mua). */
 export const redeemCost = (price: number): number => percentOf(price, REDEEM_PERCENT);
 
-/** Tiền nhận khi bán ô cho ngân hàng (60% nếu chưa cắm, 10% nếu đang cắm). */
+/** Tiền nhận khi bán ô cho ngân hàng (55% nếu chưa cắm, 10% nếu đang cắm). */
 export const sellValue = (price: number, mortgaged: boolean): number =>
   percentOf(price, mortgaged ? SELL_MORTGAGED_PERCENT : SELL_PERCENT);
 

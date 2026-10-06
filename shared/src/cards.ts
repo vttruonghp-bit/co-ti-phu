@@ -38,7 +38,7 @@ export const CHANCE_CARDS: readonly Card[] = [
     deck: 'chance',
     title: 'Tàu bay xúc xắc',
     description:
-      'Gieo 2 viên, xử lý viên 1 rồi viên 2: viên chẵn tiến, viên lẻ lùi đúng số điểm của viên đó. Chỉ xử lý ô cuối.',
+      'Gieo 2 viên, xử lý viên 1 rồi viên 2: viên chẵn tiến, viên lẻ lùi đúng số điểm của viên đó. Chỉ xử lý ô cuối. Mỗi lần tiến qua hoặc dừng ô Bắt Đầu nhận 200Đ; đi lùi qua không nhận.',
     effect: { type: 'flyDice' },
   },
   {
@@ -67,7 +67,7 @@ export const CHANCE_CARDS: readonly Card[] = [
     deck: 'chance',
     title: 'Miễn thuế nhà đất',
     description:
-      'Giữ thẻ; miễn một lần tiền thuê khi dừng ở đất màu đang hoạt động của người khác (không dùng cho ga, nhà máy).',
+      'Giữ thẻ; bắt buộc dùng ở lần trả tiền thuê đất màu đang hoạt động của người khác kế tiếp (không dùng cho ga, nhà máy).',
     effect: { type: 'keep', card: 'rentWaiver' },
   },
   {
@@ -132,7 +132,7 @@ export const CHANCE_CARDS: readonly Card[] = [
     deck: 'chance',
     title: 'Người thủ đô',
     description:
-      'Chỉ có hiệu lực nếu đang sở hữu Phố Cổ (kể cả đang cắm) khi rút. Giữ quyền miễn một lần thuế ở ô 04 hoặc 38. Mất Phố Cổ trước khi dùng thì quyền hết hiệu lực.',
+      'Chỉ có hiệu lực nếu đang sở hữu Phố Cổ (kể cả đang cắm) khi rút. Giữ quyền miễn một lần thuế, tự dùng ở lần kế tiếp dừng ô 04 hoặc 38. Mất Phố Cổ trước khi dùng thì quyền hết hiệu lực.',
     effect: { type: 'capitalCitizen', requiredTile: 1 },
   },
   {
@@ -140,7 +140,7 @@ export const CHANCE_CARDS: readonly Card[] = [
     deck: 'chance',
     title: 'Canh bạc xây dựng',
     description:
-      'So số đất màu của bạn với trung bình (chưa làm tròn) của mọi người. Ít hơn: nâng miễn phí 1 cấp ở một đất hợp lệ. Nhiều hơn: hạ 1 cấp một đất có công trình, không hoàn tiền. Bằng nhau hoặc không có ô hợp lệ: không đổi.',
+      'So số đất màu của bạn (kể cả đang cắm) với trung bình chưa làm tròn của mọi người. Ít hơn: nâng miễn phí 1 cấp ở một đất của bạn đang hoạt động, chưa có khách sạn. Nhiều hơn: hạ 1 cấp một đất có công trình của bạn, không hoàn tiền. Bằng nhau hoặc không có ô hợp lệ: không đổi.',
     effect: { type: 'buildingGamble' },
   },
   {
@@ -148,7 +148,7 @@ export const CHANCE_CARDS: readonly Card[] = [
     deck: 'chance',
     title: 'Cháy nhà hàng xóm',
     description:
-      'Mỗi người gieo 2 viên. Cộng tất cả điểm, đếm từ vị trí người rút theo chiều đi. Ô đích là đất màu có công trình thì hạ 1 cấp, không hoàn tiền; ô khác không có tác dụng.',
+      'Mỗi người gieo 2 viên. Cộng tất cả điểm, đếm từ vị trí người rút theo chiều đi. Ô đích là đất màu có công trình (của bất kỳ ai) thì hạ 1 cấp, không hoàn tiền; ô khác không có tác dụng.',
     effect: { type: 'neighborFire' },
   },
 ];
@@ -229,7 +229,7 @@ export const COMMUNITY_CARDS: readonly Card[] = [
     deck: 'community',
     title: 'Ủng hộ người nghèo đây',
     description:
-      'Nếu bạn có ít tiền mặt nhất, nhận 20Đ từ mỗi người. Nếu không, trả 50Đ cho người có ít tiền mặt nhất.',
+      'Nếu bạn có ít tiền mặt nhất (kể cả đồng hạng), nhận 20Đ từ mỗi người. Nếu không, trả 50Đ cho người có ít tiền mặt nhất; đồng hạng thì chia đều làm tròn xuống, phần lẻ trả Ngân hàng.',
     effect: { type: 'helpThePoor', collectFromEach: 20, payToPoorest: 50 },
   },
   {
@@ -279,7 +279,7 @@ export const COMMUNITY_CARDS: readonly Card[] = [
     deck: 'community',
     title: 'Kẻ khóc người cười đây',
     description:
-      'Giữ lại thẻ này. Lần tới người khác rút thẻ làm thay đổi tiền mặt: họ nhận tiền thì bạn trả 40Đ, họ trả tiền thì bạn nhận 40Đ.',
+      'Giữ lại thẻ này. Lần tới người khác rút thẻ tác động trực tiếp đến tiền mặt của họ: họ nhận tiền thì bạn trả họ 40Đ, họ trả tiền thì họ trả bạn 40Đ.',
     effect: { type: 'keep', card: 'fortuneMirror' },
   },
   {
@@ -317,7 +317,7 @@ export const COMMUNITY_CARDS: readonly Card[] = [
     deck: 'community',
     title: 'Thằng Bờm đổi quạt mo',
     description:
-      'Viên 1 chọn đối thủ theo vòng ghế. Viên 2 chẵn: đổi đất màu rẻ nhất của hai bên; lẻ: đổi đất màu rẻ nhất của bạn lấy ga/nhà máy gần nhất phía trước của đối thủ. Thiếu tài sản thì đối thủ trả bạn 100Đ.',
+      'Viên 1 chọn đối thủ theo vòng ghế (người kế tiếp là 1…); lớn hơn số đối thủ thì gieo lại. Viên 2 chẵn: đổi đất màu rẻ nhất của hai bên, kể cả đang cắm, giữ nguyên cấp nhà. Lẻ: đổi đất màu rẻ nhất của bạn lấy ga/nhà máy gần nhất phía trước bạn của đối thủ. Thiếu tài sản thì đối thủ trả bạn 100Đ.',
     effect: { type: 'swapProperty', penalty: 100 },
   },
 ];
