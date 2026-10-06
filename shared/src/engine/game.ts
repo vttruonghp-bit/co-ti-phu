@@ -321,6 +321,9 @@ function handle(s: GameState, a: Action, rng: Rng): void {
         s.pending = { type: 'roll', playerId: p.id };
         return;
       }
+      if (a.type === 'payBail' && p.cash < JAIL_BAIL) {
+        throw new RuleError(`Cần ${JAIL_BAIL}Đ để bảo lãnh, hãy dùng thẻ ra tù`);
+      }
       const after: Step = { type: 'moveAfterJail', playerId: p.id, steps: pd.steps };
       prepend(s, a.type === 'payBail' ? [bailStep(p), after] : [after]);
       return advance(s, rng);
@@ -404,7 +407,9 @@ function handle(s: GameState, a: Action, rng: Rng): void {
     case 'surrender': {
       const p = getPlayer(s, a.playerId);
       if (p.status !== 'active') throw new RuleError('Bạn không còn trong ván');
-      if (s.pending.type === 'pay' && s.pending.playerId === p.id) {
+      // Đang có khoản bắt buộc chờ (của bất kỳ ai) thì mọi thao tác khác bị khóa.
+      const owes = (x: Step) => x.type === 'pay' && x.playerId === p.id;
+      if (s.pending.type === 'pay' || s.pending.type === 'jailRelease' || s.queue.some(owes)) {
         throw new RuleError('Không đầu hàng được khi đang có khoản phải trả');
       }
       return endGame(s, p, 'surrendered');
@@ -525,8 +530,17 @@ function manage(s: GameState, playerId: string, ops: ManageOp[]) {
   if (!startOfTurn && !inDebt) {
     throw new RuleError('Chỉ Ụp/Mở được ở đầu lượt hoặc khi đang nợ');
   }
-  if (ops.length === 0) throw new RuleError('Chưa có thay đổi nào');
-  for (const op of ops) applyManageOp(s, p, op, inDebt);
+  if (!Array.isArray(ops) || ops.length === 0) throw new RuleError('Chưa có thay đổi nào');
+  // Cả bản nháp được xác nhận một lần: chỉ cần tiền sau toàn bộ thao tác không âm.
+  const mortgagedHere = new Set<number>();
+  for (const op of ops) {
+    if (op.op === 'redeem' && mortgagedHere.has(op.tile)) {
+      throw new RuleError('Bản nháp vừa cắm rồi lại chuộc cùng một ô, hãy dùng nút + để hoàn lại');
+    }
+    if (op.op === 'mortgage') mortgagedHere.add(op.tile);
+    applyManageOp(s, p, op, inDebt);
+  }
+  if (p.cash < 0) throw new RuleError('Không đủ tiền cho bản nháp này');
 }
 
 function applyManageOp(s: GameState, p: PlayerState, op: ManageOp, inDebt: boolean) {
@@ -567,12 +581,13 @@ function applyManageOp(s: GameState, p: PlayerState, op: ManageOp, inDebt: boole
       if (inDebt) throw new RuleError('Không chuộc được khi đang nợ');
       if (!t.mortgaged) throw new RuleError(`${tile.name} không bị cắm`);
       const cost = redeemCost(tile.price);
-      if (p.cash < cost) throw new RuleError(`Không đủ tiền chuộc ${tile.name}`);
       p.cash -= cost;
       t.mortgaged = false;
       addLog(s, p.id, `Chuộc ${tile.name}`, -cost);
       return;
     }
+    default:
+      throw new RuleError('Thao tác không hợp lệ');
   }
 }
 
@@ -614,8 +629,14 @@ function timeout(s: GameState, rng: Rng): void {
   const pd = s.pending;
   switch (pd.type) {
     case 'roll':
-    case 'jail':
       return handle(s, { type: 'roll', playerId: pd.playerId }, rng);
+    case 'jail':
+      // Thử đổ đôi; lần thứ 3 thất bại mà có thẻ thì dùng thẻ luôn, không chờ thêm 60 giây.
+      handle(s, { type: 'roll', playerId: pd.playerId }, rng);
+      if (s.pending.type === 'jailRelease' && s.pending.playerId === pd.playerId) {
+        handle(s, { type: 'useJailCard', playerId: pd.playerId }, rng);
+      }
+      return;
     case 'jailRelease':
       return handle(s, { type: 'useJailCard', playerId: pd.playerId }, rng);
     case 'buy':

@@ -55,8 +55,9 @@ export function checkInvariants(s: GameState) {
   const allIds = new Set([...CHANCE_CARDS, ...COMMUNITY_CARDS].map((c) => c.id));
   for (const id of seen) check(allIds.has(id), `thẻ lạ ${id}`);
   check(s.log.length <= 100, 'nhật ký quá dài');
-  if (s.pending.type !== 'ended') {
-    const p = s.players.find((x) => x.id === s.pending.playerId);
+  const pd = s.pending;
+  if (pd.type !== 'ended') {
+    const p = s.players.find((x) => x.id === pd.playerId);
     check(p?.status === 'active', 'chờ người không còn chơi');
     check(s.players[s.current]!.status === 'active', 'người giữ lượt không còn chơi');
   } else {

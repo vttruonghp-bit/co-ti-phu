@@ -115,8 +115,9 @@ function landOwnable(
   }
 
   if (t.owner === p.id) {
-    if (t.boughtTurn === s.turnNumber) return none;
     if (tile.kind === 'property') {
+      // Lượt vừa mua chưa được nâng (chuộc ga, nhà máy thì vẫn được).
+      if (t.boughtTurn === s.turnNumber) return none;
       if (t.mortgaged) {
         return p.cash >= redeemCost(tile.price) + tile.upgradeCost
           ? {
@@ -268,17 +269,13 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
       }
       if (total === 0) return { steps: [], net: 0 };
       const u = s.tiles[e.utilityIndex]!;
-      const creditors: Creditor[] = [];
-      let net = -total;
-      if (u.owner !== null && !u.mortgaged) {
-        const share = Math.floor((total * e.ownerPercent) / 100);
-        creditors.push({ playerId: u.owner, amount: share });
-        if (u.owner === p.id) net += share;
-        creditors.push({ playerId: null, amount: total - share });
-      } else {
-        creditors.push({ playerId: null, amount: total });
-      }
-      return { steps: [cardPay(p, creditors)], net };
+      const share =
+        u.owner !== null && !u.mortgaged ? Math.floor((total * e.ownerPercent) / 100) : 0;
+      // Người rút là chủ nhà máy thì phần 20% của mình không phải trả: chỉ nợ Ngân hàng phần còn lại.
+      const creditors: Creditor[] = [{ playerId: null, amount: total - share }];
+      if (share > 0 && u.owner !== p.id) creditors.unshift({ playerId: u.owner, amount: share });
+      const owed = creditors.reduce((a, c) => a + c.amount, 0);
+      return { steps: [cardPay(p, creditors)], net: -owed };
     }
     case 'payPerStation': {
       const amount = e.amounts[activeCount(s, p.id, 'station')] ?? 0;

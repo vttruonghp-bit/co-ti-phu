@@ -97,12 +97,16 @@ const CAPITAL_TILE = (() => {
   return e.requiredTile;
 })();
 
-/** Bỏ thẻ đang giữ và trả nó về đáy chồng thẻ của nó. */
+/**
+ * Bỏ thẻ đang giữ và trả nó về đáy chồng thẻ của nó. Chồng đã rút hết thì không đặt riêng thẻ này
+ * vào: lần rút sau xáo lại toàn bộ thẻ không ai giữ, gồm cả thẻ này.
+ */
 export function takeCard(s: GameState, p: PlayerState, kind: KeepableCard): boolean {
   const i = p.heldCards.findIndex((c) => c.kind === kind);
   if (i < 0) return false;
   const [card] = p.heldCards.splice(i, 1);
-  s.decks[DECK_OF.get(card!.cardId)!].push(card!.cardId);
+  const deck = s.decks[DECK_OF.get(card!.cardId)!];
+  if (deck.length > 0) deck.push(card!.cardId);
   return true;
 }
 
