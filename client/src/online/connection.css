@@ -72,6 +72,15 @@
   font-size: 14px;
 }
 
-.resume-card .btn {
+.resume-card > .btn {
   min-width: 180px;
+}
+
+.resume-card .resume-warn {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.resume-actions {
+  align-self: stretch;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useHotSeat } from './game/useHotSeat';
 import { ConnectionBanner, ResumeScreen } from './online/Connection';
 import { codeFromUrl, dropCodeFromUrl } from './online/storage';
@@ -15,7 +15,7 @@ export function App() {
   const hotSeat = useHotSeat();
   const online = useOnline();
   const { load } = hotSeat;
-  // Mã phòng trong đường dẫn mời (?phong=CODE), bỏ đi khi đã vào phòng.
+  // Mã phòng trong đường dẫn mời (?phong=CODE), bỏ đi khi đã vào phòng đó.
   const [invite, setInvite] = useState(codeFromUrl);
   // Tải lại trang giữa ván chơi chung thì vào thẳng ván đó như trước.
   const [local, setLocal] = useState<Local>(() =>
@@ -35,18 +35,36 @@ export function App() {
     });
   }, [load]);
 
-  const inRoom = online.room !== null;
+  // Vé cũ (lưu từ lần trước) trỏ tới phòng khác phòng được mời: xét một lần khi vào lại được.
+  const [staleCode] = useState(() => {
+    const code = online.ticket?.code;
+    return invite && code && code !== invite ? code : null;
+  });
+  const staleChecked = useRef(false);
+  const { forget, leave } = online;
+  const roomCode = online.room?.code;
+  const roomPhase = online.room?.phase;
   useEffect(() => {
-    if (!inRoom) return;
-    dropCodeFromUrl();
-    setInvite(null);
-  }, [inRoom]);
+    if (!roomCode || !invite) return;
+    if (roomCode !== staleCode) {
+      // Đã vào phòng được mời (hoặc phòng tự tạo, tự vào): mã mời đã dùng xong.
+      dropCodeFromUrl();
+      setInvite(null);
+      return;
+    }
+    if (staleChecked.current) return;
+    staleChecked.current = true;
+    // Ván cũ đã xong, phòng chờ cũ: bỏ đi để về màn đầu với mã mời điền sẵn.
+    // Ván cũ đang chơi dở: chơi tiếp, giữ mã mời cho lúc bấm Ván mới.
+    if (roomPhase === 'ended') forget();
+    else if (roomPhase === 'lobby') void leave();
+  }, [roomCode, roomPhase, invite, staleCode, forget, leave]);
 
   let page: ReactNode;
   const { ticket, room, view } = online;
   if (ticket) {
     if (!room || (room.phase !== 'lobby' && !view)) {
-      page = <ResumeScreen code={ticket.code} status={online.status} onCancel={online.forget} />;
+      page = <ResumeScreen code={ticket.code} status={online.status} onAbandon={online.abandon} />;
     } else if (room.phase === 'lobby' || !view) {
       page = (
         <LobbyScreen

@@ -33,8 +33,10 @@ export interface Online {
   leave(): Promise<string | null>;
   /** Gửi thao tác trong ván; trả lỗi hoặc null khi máy chủ đã nhận (và đã gửi trạng thái mới). */
   action(action: Action): Promise<string | null>;
-  /** Bỏ vé và về màn đầu (Ván mới sau khi ván kết thúc, hoặc thôi chờ vào lại). */
+  /** Bỏ vé và về màn đầu (Ván mới sau khi ván kết thúc, hoặc thôi ván cũ để vào phòng mới). */
   forget(): void;
+  /** Thôi chờ vào lại: báo rời phòng nếu còn mạng (phòng chờ thì nhả ghế), rồi bỏ vé. */
+  abandon(): Promise<void>;
   clearNotice(): void;
 }
 
@@ -44,6 +46,8 @@ const SLOW = 'Máy chủ không trả lời. Thử lại nhé.';
 /** Đợi trạng thái mới sau khi máy chủ nhận thao tác, tối đa chừng này. */
 const STATE_WAIT_MS = 1500;
 const RESUME_RETRY_MS = 2000;
+/** Bỏ ghế: chờ máy chủ nhận lời rời phòng tối đa chừng này rồi vẫn bỏ vé. */
+const ABANDON_WAIT_MS = 2000;
 
 interface Data {
   room: RoomView | null;
@@ -245,6 +249,12 @@ export function useOnline(): Online {
     drop(null);
     getSocket().disconnect();
   }, [drop]);
+  const abandon = useCallback(async () => {
+    // Gửi sau lời vào lại nên máy chủ xử lí sau nó. Đang chơi thì máy chủ từ chối: ghế giữ nguyên.
+    const s = getSocket();
+    if (s.connected) await request<Ack>((done) => s.emit('room:leave', done), ABANDON_WAIT_MS);
+    forget();
+  }, [forget]);
   const clearNotice = useCallback(() => setNotice(null), []);
 
   const room = ticket && data.room?.code === ticket.code ? data.room : null;
@@ -262,6 +272,7 @@ export function useOnline(): Online {
     leave,
     action,
     forget,
+    abandon,
     clearNotice,
   };
 }
