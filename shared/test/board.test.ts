@@ -4,6 +4,8 @@ import {
   BOARD_SIZE,
   GO_TO_JAIL_INDEX,
   JAIL_INDEX,
+  MAX_BUILDING_LEVEL,
+  METRO_INDEX,
   gridPosition,
   isOwnable,
   nearestAhead,
@@ -31,6 +33,7 @@ describe('bàn cờ', () => {
   it('các góc nằm đúng chỗ', () => {
     expect(BOARD[0]?.kind).toBe('go');
     expect(BOARD[JAIL_INDEX]?.kind).toBe('jail');
+    expect(METRO_INDEX).toBe(JAIL_INDEX);
     expect(BOARD[20]?.kind).toBe('parking');
     expect(BOARD[GO_TO_JAIL_INDEX]?.kind).toBe('goToJail');
   });
@@ -55,9 +58,24 @@ describe('bàn cờ', () => {
     expect(byName('Dinh Độc Lập').price).toBe(260);
     expect(byName('Bến Nhà Rồng')).toMatchObject({
       price: 280,
-      rents: [24, 120, 360, 850, 1200],
+      rents: [24, 120, 360, 850, 1025, 1200],
       upgradeCost: 150,
     });
+  });
+
+  it('mỗi đất có 6 mức thuê: đất trống, 1–4 nhà, khách sạn', () => {
+    for (const p of properties) expect(p.rents, p.name).toHaveLength(MAX_BUILDING_LEVEL + 1);
+  });
+
+  it('ô cùng giá mua có cùng bảng thuê và giá xây', () => {
+    for (const a of properties) {
+      for (const b of properties) {
+        if (a.price === b.price) {
+          expect(a.rents, `${a.name} / ${b.name}`).toEqual(b.rents);
+          expect(a.upgradeCost).toBe(b.upgradeCost);
+        }
+      }
+    }
   });
 
   it('isOwnable chỉ đúng với đất, ga, nhà máy', () => {

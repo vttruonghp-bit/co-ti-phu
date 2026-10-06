@@ -13,8 +13,10 @@ describe('tài chính', () => {
     expect(redeemCost(400)).toBe(220);
   });
 
-  it('bán cho ngân hàng 60% nếu chưa cắm, 10% nếu đang cắm', () => {
-    expect(sellValue(280, false)).toBe(168);
+  it('bán cho ngân hàng 55% nếu chưa cắm, 10% nếu đang cắm', () => {
+    expect(sellValue(60, false)).toBe(33);
+    expect(sellValue(200, false)).toBe(110);
+    expect(sellValue(280, false)).toBe(154);
     expect(sellValue(280, true)).toBe(28);
   });
 
