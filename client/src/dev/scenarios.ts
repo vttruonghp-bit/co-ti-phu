@@ -10,6 +10,9 @@ import { MANAGE_SCENARIOS } from './scenarios-manage';
 import { MOVE_SCENARIOS } from './scenarios-moves';
 import { QA_SCENARIOS } from './scenarios-qa';
 import { SETUP_SCENARIOS } from './scenarios-setup';
+import { TEST_CHANCE_SCENARIOS } from './scenarios-test-chance';
+import { TEST_COMMUNITY_SCENARIOS } from './scenarios-test-community';
+import { TEST_TILES_SCENARIOS } from './scenarios-test-tiles';
 
 const BASE: Record<string, () => GameState> = {
   start: () => fresh(6),
@@ -68,6 +71,9 @@ export const SCENARIOS: Record<string, () => GameState> = {
   ...BASE,
   ...SETUP_SCENARIOS,
   ...BOARD_SCENARIOS,
+  ...TEST_CHANCE_SCENARIOS,
+  ...TEST_COMMUNITY_SCENARIOS,
+  ...TEST_TILES_SCENARIOS,
   ...MANAGE_SCENARIOS,
   ...MOVE_SCENARIOS,
   ...CARD_SCENARIOS,
