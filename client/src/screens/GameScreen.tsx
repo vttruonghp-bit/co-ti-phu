@@ -11,6 +11,7 @@ import {
 } from '@cotiphu/shared';
 import { Board } from '../components/Board';
 import { Dice } from '../components/Dice';
+import { TurnLine } from '../components/Sheet';
 import { TokenIcon } from '../components/TokenIcon';
 import {
   assetCount,
@@ -22,7 +23,7 @@ import {
   tileName,
 } from '../game/format';
 import { debtorOf } from '../game/draft';
-import type { HotSeatGame } from '../game/useHotSeat';
+import { HOT_SEAT, PlayModeContext, type PlayMode } from '../online/mode';
 import { AppearanceSheet } from '../sheets/AppearanceSheet';
 import { CardSheet } from '../sheets/CardSheet';
 import { ChooseTileSheet } from '../sheets/ChooseTileSheet';
@@ -35,14 +36,45 @@ import type { CardEvent, HighwayEvent } from '../sheets/types';
 import { colorOf } from '../theme';
 import './game-screen.css';
 
+/** Ván đang hiện. `actions` đổi mỗi khi có thao tác mới (về ô đang đứng, hiện thẻ vừa rút). */
+export interface GameView {
+  game: GameState;
+  /** Trạng thái ngay trước thao tác cuối (để hiện "trước → sau"). */
+  previous: GameState | null;
+  actions: number;
+}
+
 interface GameScreenProps {
-  hotSeat: HotSeatGame;
-  dispatch: (action: Action) => string | null;
+  view: GameView;
+  /** Trả thông báo lỗi, hoặc null khi đã áp dụng (online: khi máy chủ đã nhận). */
+  dispatch: (action: Action) => Promise<string | null> | string | null;
   onNewGame: () => void;
+  /** Mặc định chơi chung một máy. */
+  mode?: PlayMode;
+  /** Chơi chung một máy: về màn đầu, ván vẫn giữ để chơi tiếp. */
+  onHome?: () => void;
 }
 
 /** 'board': tạm ẩn Xử lý nợ để xem bàn cờ (nút chính "Xử lý nợ" mở lại). */
 type Manual = null | 'manage' | 'appearance' | 'surrender' | 'board';
+
+/**
+ * Một lần rút thẻ hoặc gieo Cao tốc cần hiện, kèm ván lúc đó: online, ván có thể đã đi tiếp
+ * trong khi máy này chưa bấm Tiếp tục.
+ */
+interface Reveal {
+  game: GameState;
+  previous: GameState | null;
+  event: CardEvent | HighwayEvent;
+}
+
+/** Giữ tối đa chừng này lần rút chưa xem (khi người khác đi nhanh hơn). */
+const MAX_REVEALS = 6;
+
+const revealsOf = ({ game, previous }: GameView): Reveal[] =>
+  game.events
+    .filter((e): e is CardEvent | HighwayEvent => e.type === 'card' || e.type === 'highway')
+    .map((event) => ({ game, previous, event }));
 
 /** Người ván đang chờ (người phải bấm nút tiếp theo); khi ván kết thúc là người giữ lượt cuối. */
 function waitingPlayer(s: GameState): PlayerState {
@@ -60,53 +92,86 @@ function canManage(s: GameState, p: PlayerState): boolean {
   );
 }
 
+/** In đậm tên người chơi trong một dòng chữ. */
+function withName(text: string, name: string): ReactNode {
+  const i = text.indexOf(name);
+  if (i < 0) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <b>{name}</b>
+      {text.slice(i + name.length)}
+    </>
+  );
+}
+
 interface MainAction {
   label: string;
   tone: string;
   run: () => void;
 }
 
-export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
-  const { game, previous, actions } = hotSeat;
+export function GameScreen({
+  view,
+  dispatch,
+  onNewGame,
+  mode = HOT_SEAT,
+  onHome,
+}: GameScreenProps) {
+  const { game, previous, actions } = view;
+  const online = mode.kind === 'online' ? mode : null;
   const [manual, setManual] = useState<Manual>(null);
   const [viewTile, setViewTile] = useState<number | null>(null);
-  const [cardsSeen, setCardsSeen] = useState(0);
+  const [reveals, setReveals] = useState(() => revealsOf(view));
   const [error, setError] = useState<string | null>(null);
 
   const cur = game.players[game.current]!;
-  const me = waitingPlayer(game);
+  const waiter = waitingPlayer(game);
+  // Người cầm máy này: online là chính mình; chơi chung một máy là người ván đang chờ.
+  const me = (online && playerById(game, online.meId)) || waiter;
+  // Ván đang chờ người cầm máy này (chơi chung một máy thì luôn đúng).
+  const myMove = !online || waiter.id === me.id;
+  const accent = colorOf(waiter.color);
   const meColor = colorOf(me.color);
   const pd = game.pending;
+  const offline = new Set(online?.seats.filter((s) => !s.connected).map((s) => s.id));
 
-  // Mỗi thao tác mới: về xem ô đang đứng, chưa xem thẻ nào. Đặt lại ngay trong lần vẽ này
-  // (không đợi effect) để không lóe màn cũ hay hiện nhầm lá thẻ trong một khung hình.
+  // Mỗi thao tác mới: về xem ô đang đứng, xếp các lá thẻ vừa rút vào hàng chờ xem. Đặt lại ngay
+  // trong lần vẽ này (không đợi effect) để không lóe màn cũ hay hiện nhầm lá thẻ trong một khung hình.
   const [seenAt, setSeenAt] = useState(actions);
   if (seenAt !== actions) {
     setSeenAt(actions);
     setViewTile(null);
-    setCardsSeen(0);
+    setReveals((r) => [...r, ...revealsOf(view)].slice(-MAX_REVEALS));
   }
   useEffect(() => {
     if (!error) return;
     const t = setTimeout(() => setError(null), 3500);
     return () => clearTimeout(t);
   }, [error]);
+  // Online: rung nhẹ khi tới lượt mình (máy nào hỗ trợ).
+  const myTurnNow = online !== null && myMove && pd.type !== 'ended';
+  useEffect(() => {
+    if (myTurnNow) navigator.vibrate?.(60);
+  }, [myTurnNow]);
 
-  const send = (a: Action) => {
-    const err = dispatch(a);
-    if (err) setError(err);
-    return err;
+  // Online: số thao tác đang chờ máy chủ; nút chính mờ đi trong lúc chờ để khỏi bấm lại.
+  const [busy, setBusy] = useState(0);
+  const send = async (a: Action) => {
+    if (online) setBusy((n) => n + 1);
+    try {
+      const err = await dispatch(a);
+      if (err) setError(err);
+      return err;
+    } finally {
+      if (online) setBusy((n) => n - 1);
+    }
   };
 
-  // Thẻ vừa rút và kết quả đổ xúc xắc Cao tốc lần lượt hiện cho người chơi xem.
-  const cardEvents = game.events.filter(
-    (e): e is CardEvent | HighwayEvent => e.type === 'card' || e.type === 'highway',
-  );
-  const pendingCard = cardEvents[cardsSeen];
   const lastRoll = [...game.events].reverse().find((e) => e.type === 'roll');
   // Khoản đang chờ trả tính theo xúc xắc gieo mới (thẻ 10 × xúc xắc, nhà máy khi đến bằng Metro…):
   // ô giữa hiện chính xúc xắc đó thay cho lần đổ để đi.
-  const formula = payFormula(game, me);
+  const formula = payFormula(game, waiter);
   const dice = formula
     ? formula.dice
     : lastRoll?.type === 'roll'
@@ -115,7 +180,7 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   // Xúc xắc mang màu người gieo: lần đổ trong thao tác này, không thì người giữ lượt
   // (lastDice bị xóa khi sang lượt mới nên luôn là của người giữ lượt).
   const roller = formula
-    ? me
+    ? waiter
     : lastRoll?.type === 'roll'
       ? playerById(game, lastRoll.playerId)
       : cur;
@@ -128,7 +193,8 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
     onClose: () => setManual(null),
   };
 
-  // Đầu hàng / Đen vl: cũng đặt trong các màn Metro, tù, chọn ô vì các màn này che màn chính.
+  // Đầu hàng / Đen vl (cho người cầm máy): cũng đặt trong các màn Metro, tù, chọn ô vì các màn
+  // này che màn chính.
   const danger = (
     <div className="btn-row danger-row">
       <button type="button" className="btn btn-surrender" onClick={() => setManual('surrender')}>
@@ -141,15 +207,20 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   );
 
   // Màn phụ: thẻ vừa rút trước, rồi tới việc ván đang chờ, rồi các màn người chơi tự mở.
+  // Online chỉ người đang nợ thấy Xử lý nợ, và chỉ người ván đang chờ thấy Metro, tù, chọn ô.
   const debtor = debtorOf(game, previous);
+  const myDebt = debtor !== null && (!online || debtor === me.id) ? debtor : null;
+  const reveal = reveals[0];
   let sheet: ReactNode = null;
   // Thẻ làm phá sản vẫn hiện trước, rồi mới tới màn kết thúc.
-  if (pendingCard) {
+  if (reveal) {
     sheet = (
       <CardSheet
         {...sheetProps}
-        event={pendingCard}
-        onContinue={() => setCardsSeen((n) => n + 1)}
+        game={reveal.game}
+        previous={reveal.previous}
+        event={reveal.event}
+        onContinue={() => setReveals((r) => r.slice(1))}
       />
     );
   } else if (pd.type === 'ended') {
@@ -158,28 +229,29 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
     sheet = <AppearanceSheet {...sheetProps} playerId={me.id} />;
   } else if (manual === 'surrender') {
     sheet = <SurrenderSheet {...sheetProps} playerId={me.id} />;
-  } else if (manual === 'manage' || (debtor && manual !== 'board')) {
+  } else if (manual === 'manage' || (myDebt && manual !== 'board')) {
     // Xử lý nợ là của người đang nợ (có thể không phải người giữ lượt), không đóng được.
-    const mode: ManageMode = debtor ? 'debt' : canManage(game, me) ? 'manage' : 'view';
+    const manageMode: ManageMode = myDebt ? 'debt' : canManage(game, me) ? 'manage' : 'view';
     // Mỗi người nợ một màn mới (dự thảo và chỗ cuộn bắt đầu lại).
     sheet = (
       <ManageSheet
         {...sheetProps}
-        key={debtor ?? me.id}
-        mode={mode}
-        playerId={debtor ?? me.id}
+        key={myDebt ?? me.id}
+        mode={manageMode}
+        playerId={myDebt ?? me.id}
         onShowBoard={() => setManual('board')}
       />
     );
-  } else if (pd.type === 'metro') {
+  } else if (myMove && pd.type === 'metro') {
     sheet = <MetroSheet {...sheetProps} extra={danger} />;
-  } else if (pd.type === 'jail' || pd.type === 'jailRelease') {
+  } else if (myMove && (pd.type === 'jail' || pd.type === 'jailRelease')) {
     sheet = <JailSheet {...sheetProps} onOpenManage={() => setManual('manage')} extra={danger} />;
-  } else if (pd.type === 'chooseTile') {
+  } else if (myMove && pd.type === 'chooseTile') {
     sheet = <ChooseTileSheet {...sheetProps} extra={danger} />;
   }
 
   const main = ((): MainAction | null => {
+    if (!myMove) return null;
     const id = me.id;
     switch (pd.type) {
       case 'roll':
@@ -227,13 +299,13 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   })();
 
   const secondary: MainAction =
-    pd.type === 'buy'
+    myMove && pd.type === 'buy'
       ? {
           label: 'Không mua',
           tone: 'btn-outline',
           run: () => send({ type: 'declineBuy', playerId: me.id }),
         }
-      : pd.type === 'upgrade'
+      : myMove && pd.type === 'upgrade'
         ? {
             label: 'Bỏ qua',
             tone: 'btn-outline',
@@ -242,76 +314,152 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
         : { label: 'Ụp / Mở', tone: 'btn-outline', run: () => setManual('manage') };
 
   const accentStyle = {
-    ['--accent' as string]: meColor.main,
-    ['--accent-soft' as string]: meColor.soft,
+    ['--accent' as string]: accent.main,
+    ['--accent-soft' as string]: accent.soft,
   };
+  const playing = pd.type !== 'ended';
+  // Online, khi ván chờ người khác: dòng "Đang chờ Minh …" thay cho "Chuyển máy cho …".
+  const othersText = online && !myMove ? waitingOther(game, waiter) : null;
 
   return (
-    <main className="phone game-screen" style={accentStyle}>
-      {/* Khi màn phụ đang mở, màn chính phía sau không bấm hay đọc tới được. */}
-      <div className="game-main" inert={sheet !== null}>
-        <header className="app-header">
-          <h1 className="app-title">CỜ TỶ PHÚ</h1>
-          <span className="app-turn" style={{ color: colorOf(cur.color).main }}>
-            Lượt {cur.name} · {money(cur.cash)}
-          </span>
-        </header>
+    <PlayModeContext.Provider value={mode}>
+      <main className="phone game-screen" style={accentStyle}>
+        {/* Khi màn phụ đang mở, màn chính phía sau không bấm hay đọc tới được. */}
+        <div className="game-main" inert={sheet !== null}>
+          <header className="app-header">
+            <span className="app-brand">
+              {onHome && (
+                <button type="button" className="app-home" onClick={onHome} aria-label="Về màn đầu">
+                  <span aria-hidden="true">‹</span>
+                </button>
+              )}
+              <h1 className="app-title">CỜ TỶ PHÚ</h1>
+            </span>
+            <TurnLine game={game} />
+          </header>
 
-        {me.id !== cur.id && pd.type !== 'ended' && (
-          <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
-            Chuyển máy cho <b>{me.name}</b>: {waitingText(game, me)}
-          </p>
-        )}
-
-        <PlayersBar game={game} />
-
-        <Board
-          game={game}
-          focus={viewTile ?? me.position}
-          onTileClick={(i) => setViewTile((v) => (v === i ? null : i))}
-        >
-          <CenterPanel
-            game={game}
-            me={me}
-            tile={viewTile ?? me.position}
-            viewing={viewTile !== null}
-            dice={dice}
-            diceColor={rollerColor}
-            rollKey={actions}
-            formula={formula}
-          />
-        </Board>
-
-        <div className="btn-row action-bar">
-          {main ? (
-            <button type="button" className={`btn btn-grow ${main.tone}`} onClick={main.run}>
-              {main.label}
-            </button>
-          ) : (
-            <button type="button" className="btn btn-grow" disabled>
-              {waitingText(game, me)}
-            </button>
+          {!online && me.id !== cur.id && playing && (
+            <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
+              Chuyển máy cho <b>{me.name}</b>: {waitingText(game, me)}
+            </p>
           )}
-          <button type="button" className={`btn ${secondary.tone}`} onClick={secondary.run}>
-            {secondary.label}
-          </button>
+          {othersText && playing && (
+            <p
+              className="handoff is-waiting"
+              role="status"
+              style={{ background: accent.soft, color: accent.main }}
+            >
+              <TokenIcon icon={waiter.icon} color={waiter.color} size={20} />
+              <span>
+                {withName(othersText, waiter.name)}
+                {offline.has(waiter.id) && <span className="handoff-away"> · mất kết nối</span>}
+              </span>
+            </p>
+          )}
+          {online && myMove && me.id !== cur.id && playing && (
+            <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
+              Ván đang chờ <b>bạn</b> (ngoài lượt của {cur.name}).
+            </p>
+          )}
+
+          <PlayersBar game={game} meId={online?.meId ?? null} offline={offline} />
+
+          <Board
+            game={game}
+            focus={viewTile ?? waiter.position}
+            onTileClick={(i) => setViewTile((v) => (v === i ? null : i))}
+          >
+            <CenterPanel
+              game={game}
+              me={waiter}
+              mine={online !== null && waiter.id === me.id}
+              away={offline.has(waiter.id)}
+              tile={viewTile ?? waiter.position}
+              viewing={viewTile !== null}
+              dice={dice}
+              diceColor={rollerColor}
+              rollKey={actions}
+              formula={formula}
+            />
+          </Board>
+
+          <div className="btn-row action-bar">
+            {main ? (
+              <button
+                type="button"
+                className={`btn btn-grow ${main.tone}`}
+                disabled={busy > 0}
+                aria-busy={busy > 0}
+                onClick={main.run}
+              >
+                {main.label}
+              </button>
+            ) : (
+              <button type="button" className="btn btn-grow" disabled>
+                {othersText ? `Chờ ${waiter.name}…` : waitingText(game, me)}
+              </button>
+            )}
+            <button
+              type="button"
+              className={`btn ${secondary.tone}`}
+              disabled={busy > 0 && myMove && (pd.type === 'buy' || pd.type === 'upgrade')}
+              onClick={secondary.run}
+            >
+              {secondary.label}
+            </button>
+          </div>
+
+          <LogPanel game={game} />
+
+          {danger}
+          <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
         </div>
 
-        <LogPanel game={game} />
-
-        {danger}
-        <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
-      </div>
-
-      {sheet}
-      {error && (
-        <div className="toast" role="alert">
-          {error}
-        </div>
-      )}
-    </main>
+        {sheet}
+        {error && (
+          <div className="toast" role="alert">
+            {error}
+          </div>
+        )}
+      </main>
+    </PlayModeContext.Provider>
   );
 }
+
+/** Online: việc người khác đang làm, hiện trên máy những người đang chờ. */
+export function waitingOther(s: GameState, p: PlayerState): string {
+  const pd = s.pending;
+  const n = p.name;
+  switch (pd.type) {
+    case 'roll':
+      return `Đang chờ ${n} đổ xúc xắc…`;
+    case 'jail':
+      return `Đang chờ ${n} chọn cách ra tù…`;
+    case 'jailRelease':
+      return `Đang chờ ${n} trả 50Đ hoặc dùng thẻ ra tù…`;
+    case 'buy':
+      return `Đang chờ ${n} quyết định mua ${tileName(pd.tile)}…`;
+    case 'upgrade':
+      return pd.mode === 'build'
+        ? `Đang chờ ${n} quyết định nâng cấp ${tileName(pd.tile)}…`
+        : `Đang chờ ${n} quyết định chuộc ${tileName(pd.tile)}…`;
+    case 'metro':
+      return `Đang chờ ${n} chọn ở lại hay đi Metro…`;
+    case 'pay':
+      if (p.cash < pd.total) return `${n} thiếu tiền, đang xử lý nợ ${money(pd.total)}…`;
+      return pd.reason === 'tax'
+        ? `Đang chờ ${n} nộp ${money(pd.total)}…`
+        : `Đang chờ ${n} trả ${money(pd.total)}…`;
+    case 'chooseTile':
+      return pd.purpose === 'highway'
+        ? `Đang chờ ${n} chọn ô mở cao tốc…`
+        : `Đang chờ ${n} chọn đất cho Canh bạc xây dựng…`;
+    case 'ended':
+      return 'Ván đã kết thúc';
+  }
+}
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** Dòng mô tả ván đang chờ ai làm gì. */
 export function waitingText(s: GameState, me: PlayerState): string {
@@ -339,7 +487,15 @@ export function waitingText(s: GameState, me: PlayerState): string {
   }
 }
 
-function PlayersBar({ game }: { game: GameState }) {
+interface PlayersBarProps {
+  game: GameState;
+  /** Online: người cầm máy này (viền đậm màu của mình). */
+  meId: string | null;
+  /** Online: những người đang mất kết nối (chấm xám trên quân). */
+  offline: ReadonlySet<string>;
+}
+
+function PlayersBar({ game, meId, offline }: PlayersBarProps) {
   const cur = game.players[game.current]!;
   const others = game.players.filter((p) => p.id !== cur.id);
   return (
@@ -348,13 +504,20 @@ function PlayersBar({ game }: { game: GameState }) {
       <div className={`players-grid${others.length <= 2 ? ' is-wide' : ''}`}>
         {others.map((p) => {
           const c = colorOf(p.color);
+          const mine = p.id === meId;
+          const away = offline.has(p.id);
           return (
             <div
               key={p.id}
-              className={`player-chip${p.status !== 'active' ? ' is-out' : ''}`}
-              style={{ borderColor: `color-mix(in srgb, ${c.main} 35%, #dfe5ee)` }}
+              className={`player-chip${p.status !== 'active' ? ' is-out' : ''}${mine ? ' is-me' : ''}`}
+              style={{
+                borderColor: mine ? c.main : `color-mix(in srgb, ${c.main} 35%, #dfe5ee)`,
+              }}
             >
-              <TokenIcon icon={p.icon} color={p.color} size={18} />
+              <span className="player-chip-token">
+                <TokenIcon icon={p.icon} color={p.color} size={18} />
+                {away && <span className="offline-dot" />}
+              </span>
               <span className="player-chip-text">
                 <span className="player-chip-top">
                   <b title={p.name}>{p.name}</b>
@@ -362,7 +525,9 @@ function PlayersBar({ game }: { game: GameState }) {
                 </span>
                 {/* "đất" như hình mẫu (gồm cả ga, nhà máy) để vừa 3 cột ở màn 360px */}
                 <span className="player-chip-sub">
-                  {assetCount(game, p.id)} đất · {p.heldCards.length} thẻ
+                  {away
+                    ? 'mất kết nối'
+                    : `${assetCount(game, p.id)} đất · ${p.heldCards.length} thẻ`}
                 </span>
               </span>
             </div>
@@ -375,7 +540,12 @@ function PlayersBar({ game }: { game: GameState }) {
 
 interface CenterPanelProps {
   game: GameState;
+  /** Người ván đang chờ. */
   me: PlayerState;
+  /** Online: người đó là chính người cầm máy này. */
+  mine: boolean;
+  /** Online: người đó đang mất kết nối. */
+  away: boolean;
   tile: number;
   viewing: boolean;
   dice: readonly number[] | null;
@@ -498,6 +668,8 @@ function levelLabel(level: number): string {
 function CenterPanel({
   game,
   me,
+  mine,
+  away,
   tile,
   viewing,
   dice,
@@ -506,6 +678,8 @@ function CenterPanel({
   formula,
 }: CenterPanelProps) {
   const t = BOARD[tile]!;
+  // Online, người ván đang chờ là chính mình: gọi là "bạn" trong các dòng chữ.
+  const you = mine ? { ...me, name: 'bạn' } : me;
   // Cách tính khoản đang chờ trả chỉ hiện ở ô đang đứng.
   const pay = viewing ? null : formula;
   const st = game.tiles[tile];
@@ -523,10 +697,20 @@ function CenterPanel({
   return (
     <div className="center">
       <div className="center-turn">
-        <TokenIcon icon={me.icon} color={me.color} size={30} blink />
+        <span className="player-chip-token">
+          <TokenIcon icon={me.icon} color={me.color} size={30} blink />
+          {away && <span className="offline-dot" />}
+        </span>
         <div className="center-turn-main">
           <span className="center-turn-label">
-            {isTurn ? `Lượt của ${me.name}` : `Đang chờ ${me.name}`}
+            {mine
+              ? isTurn
+                ? 'Lượt của bạn'
+                : 'Ván đang chờ bạn'
+              : isTurn
+                ? `Lượt của ${me.name}`
+                : `Đang chờ ${me.name}`}
+            {away && ' · mất kết nối'}
           </span>
           <span className="center-turn-cash">{money(me.cash)}</span>
         </div>
@@ -574,7 +758,7 @@ function CenterPanel({
         <div className="center-foot">
           {after !== null && (
             <div className="center-after">
-              <span>Tiền của {me.name} sau giao dịch</span>
+              <span>Tiền của {you.name} sau giao dịch</span>
               <b>
                 {money(me.cash)} <span aria-hidden="true">→</span>{' '}
                 <span className={after < me.cash ? 'down' : 'up'}>
@@ -583,7 +767,9 @@ function CenterPanel({
               </b>
             </div>
           )}
-          <p className="center-wait">{waitingText(game, me)}</p>
+          <p className="center-wait">
+            {mine ? capitalize(waitingText(game, you)) : waitingText(game, me)}
+          </p>
         </div>
       </div>
     </div>

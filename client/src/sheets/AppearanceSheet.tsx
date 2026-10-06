@@ -20,8 +20,8 @@ export function AppearanceSheet({
   const changed = pick.color !== me.color || pick.icon !== me.icon;
   const c = colorOf(pick.color);
 
-  const save = () => {
-    const err = dispatch({ type: 'changeAppearance', playerId: me.id, ...pick });
+  const save = async () => {
+    const err = await dispatch({ type: 'changeAppearance', playerId: me.id, ...pick });
     if (!err) onClose();
   };
 

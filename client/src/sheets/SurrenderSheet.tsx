@@ -57,7 +57,7 @@ export function SurrenderSheet({
     return () => clearTimeout(t);
   }, [final]);
 
-  const confirm = () => setError(dispatch({ type: 'surrender', playerId: p.id }));
+  const confirm = async () => setError(await dispatch({ type: 'surrender', playerId: p.id }));
 
   return (
     <Sheet

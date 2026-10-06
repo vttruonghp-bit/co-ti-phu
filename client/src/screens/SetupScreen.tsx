@@ -94,7 +94,7 @@ function saveSetup(s: Setup) {
 }
 
 /** Tạo ván mới (hình 5): chơi chung một máy nên không có mã phòng. */
-export function SetupScreen({ onStart }: SetupScreenProps) {
+export function SetupScreen({ onStart, onBack }: SetupScreenProps) {
   const [setup, setSetup] = useState(loadSetup);
   const [editing, setEditing] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +140,14 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   return (
     <main className="phone setup-screen">
       <header className="app-header">
-        <h1 className="app-title">CỜ TỶ PHÚ</h1>
+        <span className="app-brand">
+          {onBack && (
+            <button type="button" className="app-home" onClick={onBack} aria-label="Về màn đầu">
+              <span aria-hidden="true">‹</span>
+            </button>
+          )}
+          <h1 className="app-title">CỜ TỶ PHÚ</h1>
+        </span>
         <span className="app-turn muted">Chơi chung một máy</span>
       </header>
 

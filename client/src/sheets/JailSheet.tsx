@@ -42,9 +42,9 @@ function JailChooser({ game, dispatch, onOpenManage, extra, id }: JailSheetProps
   const lastRoll = last?.type === 'roll' ? last : null;
 
   const run = () => {
-    if (way === 'roll') dispatch({ type: 'roll', playerId: id });
-    else if (way === 'bail') dispatch({ type: 'payBail', playerId: id });
-    else dispatch({ type: 'useJailCard', playerId: id });
+    if (way === 'roll') void dispatch({ type: 'roll', playerId: id });
+    else if (way === 'bail') void dispatch({ type: 'payBail', playerId: id });
+    else void dispatch({ type: 'useJailCard', playerId: id });
   };
 
   const steps = release?.steps ?? 0;

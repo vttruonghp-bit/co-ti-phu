@@ -83,6 +83,41 @@ button {
   white-space: nowrap;
 }
 
+/* Nút về màn đầu (chơi chung một máy) cạnh tên trò chơi */
+.app-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* Nút về màn đầu: không làm cao thêm dòng đầu; vùng bấm nới rộng bằng ::before */
+.app-home {
+  position: relative;
+  display: inline-block;
+  height: 18px;
+  margin-left: -2px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 18px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-home::before {
+  content: '';
+  position: absolute;
+  inset: -12px -8px;
+  border-radius: 10px;
+}
+
+.app-home:active::before {
+  background: rgb(27 39 64 / 10%);
+}
+
 .eyebrow {
   margin: 0;
   font-size: 11px;

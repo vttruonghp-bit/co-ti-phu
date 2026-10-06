@@ -110,3 +110,8 @@
     animation: none;
   }
 }
+
+/* "Lượt X · Bạn 480Đ" khi chơi online: dấu chấm giữa nhạt màu */
+.app-turn-sep {
+  color: var(--muted);
+}

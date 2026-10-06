@@ -59,7 +59,9 @@ function TileChooser({ game, dispatch, pd, extra }: ChooseTileSheetProps & { pd:
   const gridRef = useRef<HTMLDivElement>(null);
   const highway = pd.purpose === 'highway';
   const up = pd.purpose === 'gambleUp';
-  const confirm = () => tile !== null && dispatch({ type: 'chooseTile', playerId: p.id, tile });
+  const confirm = () => {
+    if (tile !== null) void dispatch({ type: 'chooseTile', playerId: p.id, tile });
+  };
 
   const footer = highway ? (
     <div className="move-footer">
