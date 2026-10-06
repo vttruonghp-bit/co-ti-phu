@@ -21,6 +21,7 @@ import {
   expireTaxWaivers,
   getPlayer,
   hasCard,
+  jumpTo,
   maxLiquidationValue,
   moveForward,
   ownableTile,
@@ -92,6 +93,7 @@ export function createGame(newPlayers: NewPlayer[], rng: Rng): GameState {
     pending: { type: 'roll', playerId: newPlayers[0]!.id },
     queue: [],
     log: [],
+    events: [],
     loserId: null,
   };
 
@@ -211,6 +213,7 @@ function enterStep(s: GameState, step: Step, rng: Rng): boolean {
           total: FORTUNE_MIRROR_AMOUNT,
           reason: 'fortuneMirror',
           confirm: false,
+          label: 'Kẻ khóc người cười',
         },
       ]);
       return false;
@@ -266,7 +269,7 @@ function executePay(s: GameState, step: Extract<Pending, { type: 'pay' }>) {
   const to = step.creditors
     .map((c) => (c.playerId === null ? 'Ngân hàng' : getPlayer(s, c.playerId).name))
     .join(', ');
-  addLog(s, p.id, `Trả ${to}`, -step.total);
+  addLog(s, p.id, step.label ?? `Trả ${to}`, -step.total);
 }
 
 // ---------------------------------------------------------------------------
@@ -275,6 +278,7 @@ function executePay(s: GameState, step: Extract<Pending, { type: 'pay' }>) {
 
 export function applyAction(state: GameState, action: Action, rng: Rng): ActionResult {
   const s = JSON.parse(JSON.stringify(state)) as GameState;
+  s.events = [];
   try {
     if (s.pending.type === 'ended') throw new RuleError('Ván đã kết thúc');
     handle(s, action, rng);
@@ -384,7 +388,7 @@ function handle(s: GameState, a: Action, rng: Rng): void {
         }
         const fee = Math.floor((p.cash * METRO_FEE_PERCENT) / 100);
         p.cash -= fee;
-        p.position = d;
+        jumpTo(s, p, d);
         s.arrivedByRoll = false;
         addLog(s, p.id, `Đi Metro đến ${BOARD[d]!.name}`, -fee);
         prepend(s, land(s, p, rng).steps);
@@ -437,6 +441,7 @@ function bailStep(p: PlayerState): Step {
     total: JAIL_BAIL,
     reason: 'jailBail',
     confirm: false,
+    label: 'Trả bảo lãnh ra tù',
   };
 }
 
@@ -446,6 +451,7 @@ function doRoll(s: GameState, rng: Rng) {
   const d2 = rollDie(rng);
   s.rolled = true;
   s.lastDice = [d1, d2];
+  s.events.push({ type: 'roll', playerId: p.id, dice: [d1, d2], jail: false });
   const double = d1 === d2;
   addLog(s, p.id, `Đổ ${d1} + ${d2}${double ? ' (đôi)' : ''}`);
   if (double) {
@@ -468,6 +474,7 @@ function doJailRoll(s: GameState, rng: Rng) {
   const d2 = rollDie(rng);
   s.rolled = true;
   s.lastDice = [d1, d2];
+  s.events.push({ type: 'roll', playerId: p.id, dice: [d1, d2], jail: true });
   p.jailAttempts += 1;
   addLog(s, p.id, `Thử đổ đôi trong tù: ${d1} + ${d2}`);
   if (d1 === d2) {
@@ -510,7 +517,9 @@ function chooseTile(
   }
   const d = rollDie(rng) as 1 | 2 | 3 | 4 | 5 | 6;
   const steps = HIGHWAY_STEPS[d];
-  p.position = (tile + steps) % BOARD_SIZE;
+  const to = (tile + steps) % BOARD_SIZE;
+  s.events.push({ type: 'highway', playerId: p.id, tile, die: d, to });
+  jumpTo(s, p, to);
   s.arrivedByRoll = false;
   addLog(s, p.id, `Cao tốc từ ${BOARD[tile]!.name}, gieo ${d}: đến ${BOARD[p.position]!.name}`);
   prepend(s, land(s, p, rng).steps);

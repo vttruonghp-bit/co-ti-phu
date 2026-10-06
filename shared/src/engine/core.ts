@@ -122,12 +122,21 @@ export function expireTaxWaivers(s: GameState) {
 
 /** Tiến `steps` ô; qua hoặc dừng ô 00 thì nhận 200Đ nếu `collectGo`. */
 export function moveForward(s: GameState, p: PlayerState, steps: number, collectGo: boolean) {
+  const from = p.position;
   const raw = p.position + steps;
   p.position = raw % BOARD_SIZE;
-  if (collectGo && raw >= BOARD_SIZE) {
+  const passedGo = collectGo && raw >= BOARD_SIZE;
+  s.events.push({ type: 'move', playerId: p.id, from, to: p.position, passedGo });
+  if (passedGo) {
     p.cash += GO_REWARD;
     addLog(s, p.id, `Qua ô Bắt Đầu`, GO_REWARD);
   }
+}
+
+/** Đặt quân thẳng tới ô `to` (Metro, Cao tốc), không nhận 200Đ. */
+export function jumpTo(s: GameState, p: PlayerState, to: number) {
+  s.events.push({ type: 'move', playerId: p.id, from: p.position, to, passedGo: false });
+  p.position = to;
 }
 
 /** Tiến đến ô `target` theo chiều kim đồng hồ. */
@@ -137,11 +146,13 @@ export function moveForwardTo(s: GameState, p: PlayerState, target: number, coll
 }
 
 /** Lùi `steps` ô, không bao giờ nhận tiền ô 00. */
-export function moveBack(p: PlayerState, steps: number) {
-  p.position = (((p.position - steps) % BOARD_SIZE) + BOARD_SIZE) % BOARD_SIZE;
+export function moveBack(s: GameState, p: PlayerState, steps: number) {
+  jumpTo(s, p, (((p.position - steps) % BOARD_SIZE) + BOARD_SIZE) % BOARD_SIZE);
 }
 
 export function sendToJail(s: GameState, p: PlayerState) {
+  if (p.position !== JAIL_INDEX) jumpTo(s, p, JAIL_INDEX);
+  s.events.push({ type: 'jail', playerId: p.id });
   p.position = JAIL_INDEX;
   p.inJail = true;
   p.jailAttempts = 0;
