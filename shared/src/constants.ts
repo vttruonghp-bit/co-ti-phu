@@ -31,7 +31,8 @@ export const UTILITY_MULTIPLIERS = [0, 4, 10] as const;
 export const MORTGAGE_PERCENT = 50;
 export const REDEEM_PERCENT = 55;
 export const SELL_PERCENT = 55;
-export const SELL_MORTGAGED_PERCENT = 10;
+/** Bán khi đang cắm: 5%, để cắm (50%) rồi bán bằng đúng bán thẳng (55%). */
+export const SELL_MORTGAGED_PERCENT = 5;
 export const DOWNGRADE_PERCENT = 50;
 
 /** Phí đi Metro: một nửa tiền mặt hiện có, làm tròn xuống. */

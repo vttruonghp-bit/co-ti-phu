@@ -84,7 +84,7 @@ _Cập nhật 06/10/2026. Gộp từ file luật đầu tiên, các câu trả l
 ## 5. Metro ở ô 10
 
 - Dừng ở ô 10 khi **không bị giam**: chọn ở lại (không mất gì) hoặc trả **đúng một nửa tiền mặt** hiện có (làm tròn xuống) để đi đến **bất kỳ ô nào trong 39 ô còn lại**.
-- Đi Metro không nhận 200Đ khi qua ô 00, và chọn đích là ô 00 cũng không nhận (mặc định, chờ Wins xác nhận). Đến ô đích thì xử lý ô đó như bình thường (đến ô 30 thì vào tù).
+- Đi Metro không nhận 200Đ khi qua ô 00, và chọn đích là ô 00 cũng không nhận. Đến ô đích thì xử lý ô đó như bình thường (đến ô 30 thì vào tù).
 - Đang bị giam thì không dùng Metro.
 
 ## 6. Ở tù
@@ -96,40 +96,40 @@ _Cập nhật 06/10/2026. Gộp từ file luật đầu tiên, các câu trả l
 ## 7. Tiền: Ụp/Mở, cắm, chuộc, bán
 
 - **Ụp/Mở** là bảng quản lý tài sản. Mỗi tài sản có nút − (hạ cấp, cắm hoặc bán) và + (hoàn lại). Bảng hiện tiền hiện có và tiền sau thao tác; chỉ khi bấm xác nhận thì tiền và quyền sở hữu mới đổi. Mở chỉ hoàn lại tối đa cấp đã có trước khi Ụp.
-- Nút + chỉ hoàn lại một bước − trong cùng bản nháp chưa xác nhận, đúng bằng số tiền bước đó (mặc định, chờ Wins xác nhận). Sau khi xác nhận, nhà đã hạ chỉ xây lại được khi dừng ở ô đó; đất đã bán chỉ mua lại được khi dừng ở ô đó. Riêng đất đang cắm thì + là chuộc (55%).
+- Nút + chỉ hoàn lại một bước − trong cùng bản nháp chưa xác nhận, đúng bằng số tiền bước đó. Sau khi xác nhận, nhà đã hạ chỉ xây lại được khi dừng ở ô đó; đất đã bán chỉ mua lại được khi dừng ở ô đó. Riêng đất đang cắm thì + là chuộc (55%).
 - **Hạ 1 cấp:** nhận 50% giá xây. Khách sạn hạ về 4 nhà.
 - **Cắm (Ụp đất):** nhận 50% giá mua. Phải hạ hết công trình trên ô đó trước.
 - **Chuộc (Mở đất):** trả **55%** giá mua, làm tròn xuống.
-- **Bán cho Ngân hàng:** nhận **55%** giá mua nếu chưa cắm, 10% nếu đang cắm. Phải hạ hết công trình trước. Ô bán xong trở lại vô chủ.
+- **Bán cho Ngân hàng:** nhận **55%** giá mua nếu chưa cắm, **5%** nếu đang cắm (nên cắm rồi bán cũng chỉ bằng bán thẳng). Phải hạ hết công trình trước. Ô bán xong trở lại vô chủ.
 
 Bảng giá đất màu, ga và nhà máy (đơn vị Đ):
 
 | Ô   | Đất                  | Mua | Trống | 1 nhà | 2 nhà | 3 nhà | 4 nhà | Khách sạn | Xây 1 cấp | Hạ 1 cấp | Cắm | Chuộc | Bán | Bán khi đang cắm |
 | --- | -------------------- | --- | ----- | ----- | ----- | ----- | ----- | --------- | --------- | -------- | --- | ----- | --- | ---------------- |
-| 01  | Phố Cổ               | 60  | 2     | 10    | 30    | 90    | 160   | 250       | 50        | 25       | 30  | 33    | 33  | 6                |
-| 03  | Chợ Đồng Xuân        | 60  | 2     | 10    | 30    | 90    | 160   | 250       | 50        | 25       | 30  | 33    | 33  | 6                |
-| 06  | Bưu Điện Hà Nội      | 100 | 6     | 30    | 90    | 270   | 400   | 550       | 50        | 25       | 50  | 55    | 55  | 10               |
-| 08  | Nhà Hát Lớn          | 100 | 6     | 30    | 90    | 270   | 400   | 550       | 50        | 25       | 50  | 55    | 55  | 10               |
-| 09  | Tháp Rùa             | 120 | 8     | 40    | 100   | 300   | 450   | 600       | 50        | 25       | 60  | 66    | 66  | 12               |
-| 11  | Quảng Trường Ba Đình | 140 | 10    | 50    | 150   | 450   | 625   | 750       | 100       | 50       | 70  | 77    | 77  | 14               |
-| 13  | Hoàng Thành          | 140 | 10    | 50    | 150   | 450   | 625   | 750       | 100       | 50       | 70  | 77    | 77  | 14               |
-| 14  | Văn Miếu             | 160 | 12    | 60    | 180   | 500   | 700   | 900       | 100       | 50       | 80  | 88    | 88  | 16               |
-| 16  | Vịnh Hạ Long         | 180 | 14    | 70    | 200   | 550   | 750   | 950       | 100       | 50       | 90  | 99    | 99  | 18               |
-| 18  | Sơn Đoòng            | 180 | 14    | 70    | 200   | 550   | 750   | 950       | 100       | 50       | 90  | 99    | 99  | 18               |
-| 19  | Tràng An             | 200 | 16    | 80    | 220   | 600   | 800   | 1000      | 100       | 50       | 100 | 110   | 110 | 20               |
-| 21  | Cầu Rồng Đà Nẵng     | 220 | 18    | 90    | 250   | 700   | 875   | 1050      | 150       | 75       | 110 | 121   | 121 | 22               |
-| 23  | Cung Đình Huế        | 220 | 18    | 90    | 250   | 700   | 875   | 1050      | 150       | 75       | 110 | 121   | 121 | 22               |
-| 24  | Hội An               | 240 | 20    | 100   | 300   | 750   | 925   | 1100      | 150       | 75       | 120 | 132   | 132 | 24               |
-| 26  | Dinh Độc Lập         | 260 | 22    | 110   | 330   | 800   | 975   | 1150      | 150       | 75       | 130 | 143   | 143 | 26               |
-| 27  | Nhà Thờ Đức Bà       | 260 | 22    | 110   | 330   | 800   | 975   | 1150      | 150       | 75       | 130 | 143   | 143 | 26               |
-| 29  | Bến Nhà Rồng         | 280 | 24    | 120   | 360   | 850   | 1025  | 1200      | 150       | 75       | 140 | 154   | 154 | 28               |
-| 31  | Chợ Bến Thành        | 300 | 26    | 130   | 390   | 900   | 1100  | 1275      | 200       | 100      | 150 | 165   | 165 | 30               |
-| 32  | Landmark 81          | 300 | 26    | 130   | 390   | 900   | 1100  | 1275      | 200       | 100      | 150 | 165   | 165 | 30               |
-| 34  | Bitexco              | 320 | 28    | 150   | 450   | 1000  | 1200  | 1400      | 200       | 100      | 160 | 176   | 176 | 32               |
-| 37  | Tháp Chăm            | 350 | 35    | 175   | 500   | 1100  | 1300  | 1500      | 200       | 100      | 175 | 192   | 192 | 35               |
-| 39  | Phú Quốc             | 400 | 50    | 200   | 600   | 1400  | 1700  | 2000      | 200       | 100      | 200 | 220   | 220 | 40               |
-| –   | Mỗi ga               | 200 | –     | –     | –     | –     | –     | –         | –         | –        | 100 | 110   | 110 | 20               |
-| –   | Mỗi nhà máy          | 150 | –     | –     | –     | –     | –     | –         | –         | –        | 75  | 82    | 82  | 15               |
+| 01  | Phố Cổ               | 60  | 2     | 10    | 30    | 90    | 160   | 250       | 50        | 25       | 30  | 33    | 33  | 3                |
+| 03  | Chợ Đồng Xuân        | 60  | 2     | 10    | 30    | 90    | 160   | 250       | 50        | 25       | 30  | 33    | 33  | 3                |
+| 06  | Bưu Điện Hà Nội      | 100 | 6     | 30    | 90    | 270   | 400   | 550       | 50        | 25       | 50  | 55    | 55  | 5                |
+| 08  | Nhà Hát Lớn          | 100 | 6     | 30    | 90    | 270   | 400   | 550       | 50        | 25       | 50  | 55    | 55  | 5                |
+| 09  | Tháp Rùa             | 120 | 8     | 40    | 100   | 300   | 450   | 600       | 50        | 25       | 60  | 66    | 66  | 6                |
+| 11  | Quảng Trường Ba Đình | 140 | 10    | 50    | 150   | 450   | 625   | 750       | 100       | 50       | 70  | 77    | 77  | 7                |
+| 13  | Hoàng Thành          | 140 | 10    | 50    | 150   | 450   | 625   | 750       | 100       | 50       | 70  | 77    | 77  | 7                |
+| 14  | Văn Miếu             | 160 | 12    | 60    | 180   | 500   | 700   | 900       | 100       | 50       | 80  | 88    | 88  | 8                |
+| 16  | Vịnh Hạ Long         | 180 | 14    | 70    | 200   | 550   | 750   | 950       | 100       | 50       | 90  | 99    | 99  | 9                |
+| 18  | Sơn Đoòng            | 180 | 14    | 70    | 200   | 550   | 750   | 950       | 100       | 50       | 90  | 99    | 99  | 9                |
+| 19  | Tràng An             | 200 | 16    | 80    | 220   | 600   | 800   | 1000      | 100       | 50       | 100 | 110   | 110 | 10               |
+| 21  | Cầu Rồng Đà Nẵng     | 220 | 18    | 90    | 250   | 700   | 875   | 1050      | 150       | 75       | 110 | 121   | 121 | 11               |
+| 23  | Cung Đình Huế        | 220 | 18    | 90    | 250   | 700   | 875   | 1050      | 150       | 75       | 110 | 121   | 121 | 11               |
+| 24  | Hội An               | 240 | 20    | 100   | 300   | 750   | 925   | 1100      | 150       | 75       | 120 | 132   | 132 | 12               |
+| 26  | Dinh Độc Lập         | 260 | 22    | 110   | 330   | 800   | 975   | 1150      | 150       | 75       | 130 | 143   | 143 | 13               |
+| 27  | Nhà Thờ Đức Bà       | 260 | 22    | 110   | 330   | 800   | 975   | 1150      | 150       | 75       | 130 | 143   | 143 | 13               |
+| 29  | Bến Nhà Rồng         | 280 | 24    | 120   | 360   | 850   | 1025  | 1200      | 150       | 75       | 140 | 154   | 154 | 14               |
+| 31  | Chợ Bến Thành        | 300 | 26    | 130   | 390   | 900   | 1100  | 1275      | 200       | 100      | 150 | 165   | 165 | 15               |
+| 32  | Landmark 81          | 300 | 26    | 130   | 390   | 900   | 1100  | 1275      | 200       | 100      | 150 | 165   | 165 | 15               |
+| 34  | Bitexco              | 320 | 28    | 150   | 450   | 1000  | 1200  | 1400      | 200       | 100      | 160 | 176   | 176 | 16               |
+| 37  | Tháp Chăm            | 350 | 35    | 175   | 500   | 1100  | 1300  | 1500      | 200       | 100      | 175 | 192   | 192 | 17               |
+| 39  | Phú Quốc             | 400 | 50    | 200   | 600   | 1400  | 1700  | 2000      | 200       | 100      | 200 | 220   | 220 | 20               |
+| –   | Mỗi ga               | 200 | –     | –     | –     | –     | –     | –         | –         | –        | 100 | 110   | 110 | 10               |
+| –   | Mỗi nhà máy          | 150 | –     | –     | –     | –     | –     | –         | –         | –        | 75  | 82    | 82  | 7                |
 
 ## 8. Thẻ Cơ Hội (19 thẻ)
 
@@ -176,7 +176,7 @@ Chồng thẻ được xáo mỗi ván; rút hết thì xáo lại. Thẻ đư�
 | 13  | Thẻ ra tù miễn phí    | Giữ đến khi dùng.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 14  | Kẻ gian đột nhập      | Trả 30Đ.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 15  | Bầu tổng thống        | Trả 30Đ cho mỗi người.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| 16  | Kẻ khóc người cười    | Giữ thẻ. Lần tới **người khác** rút thẻ có tác động **trực tiếp** làm tăng hoặc giảm tiền mặt của họ: họ nhận tiền thì mình trả 40Đ, họ trả tiền thì mình nhận 40Đ. Tính theo kết quả ròng của chính thẻ đó (không tính 200Đ qua ô 00, tiền thuê, thuế hay mua đất ở ô đến); ròng bằng 0 thì không kích hoạt. 40Đ chuyển giữa mình và người rút, sau khi thẻ của họ làm xong (mặc định, chờ Wins xác nhận). Sau đó trả thẻ về chồng.                                                     |
+| 16  | Kẻ khóc người cười    | Giữ thẻ. Lần tới **người khác** rút thẻ có tác động **trực tiếp** làm tăng hoặc giảm tiền mặt của họ: họ nhận tiền thì mình trả 40Đ, họ trả tiền thì mình nhận 40Đ. Tính theo kết quả ròng của chính thẻ đó (không tính 200Đ qua ô 00, tiền thuê, thuế hay mua đất ở ô đến); ròng bằng 0 thì không kích hoạt. 40Đ chuyển giữa mình và người rút, sau khi thẻ của họ làm xong. Sau đó trả thẻ về chồng.                                                                                   |
 | 17  | Thiên tai lũ lụt      | Nhận 50Đ.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 18  | Vào tù là rõ          | Đến ô 10, bị giam, không nhận 200Đ.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | 19  | Ngân hàng tái cơ cấu  | Tính phần nguyên trung bình tiền mặt của tất cả người chơi. Tiền mặt người rút tăng hoặc giảm để bằng đúng mức đó; người khác không đổi.                                                                                                                                                                                                                                                                                                                                                 |
