@@ -1,16 +1,33 @@
+/*
+ * Bàn cờ 11×11, hơi cao hơn rộng để ô cạnh trái/phải đủ chỗ cho tên 2 dòng và quân ở cạnh dưới.
+ * Cỡ chữ, quân và dải màu tính theo bề rộng bàn cờ (--b) nên giữ đúng tỉ lệ từ 360 đến 480px.
+ */
 .board {
   --corner: 1.32fr;
+  --corner-row: 1.25fr;
+  /* Bề rộng bàn cờ: khung điện thoại tối đa 480px, lề 12px mỗi bên. */
+  --b: calc(min(100vw, 480px) - 24px);
+  --tk: calc(var(--b) * 0.028);
+  --strip: calc(var(--b) * 0.0095);
   display: grid;
   grid-template-columns: var(--corner) repeat(9, 1fr) var(--corner);
-  grid-template-rows: var(--corner) repeat(9, 1fr) var(--corner);
+  grid-template-rows: var(--corner-row) repeat(9, 1fr) var(--corner-row);
   gap: 1.5px;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 1 / 1.12;
   padding: 3px;
   box-sizing: border-box;
   background: #dfe5ee;
   border-radius: 14px;
   box-shadow: inset 0 0 0 1px #cfd7e3;
+  container-type: inline-size;
+}
+
+@supports (width: 1cqi) {
+  .board {
+    /* cqi tính theo phần trong lề 3px của bàn cờ */
+    --b: calc(100cqi + 6px);
+  }
 }
 
 .tile {
@@ -28,7 +45,7 @@
   background: #fff;
   color: var(--ink);
   font: inherit;
-  font-size: clamp(6px, 1.95vw, 9px);
+  font-size: calc(var(--b) * 0.0208);
   font-weight: 700;
   line-height: 1.08;
   text-align: center;
@@ -37,13 +54,33 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.tile-property,
+.tile-station,
+.tile-utility {
+  padding-top: calc(var(--strip) + 2px);
+}
+
+/* Tên ô: không bao giờ ngắt giữa từ; tối đa 2 dòng (3 dòng ở hàng trên/dưới vì ô cao). */
 .tile-name {
   display: -webkit-box;
+  max-width: 100%;
+  margin: auto 0;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
   letter-spacing: -0.01em;
+}
+
+.side-top:not(.tile-corner) .tile-name,
+.side-bottom:not(.tile-corner) .tile-name {
+  -webkit-line-clamp: 3;
+}
+
+.tile-name-tight {
+  font-size: 0.9em;
+  letter-spacing: -0.02em;
 }
 
 /* Dải cấp nhà / dải màu chủ ở cạnh trên */
@@ -54,7 +91,7 @@
   right: 1px;
   display: flex;
   gap: 1px;
-  height: 14%;
+  height: var(--strip);
   min-height: 3px;
 }
 
@@ -67,17 +104,16 @@
   border-radius: 1px;
 }
 
-.tile-property .tile-name,
-.tile-station .tile-name,
-.tile-utility .tile-name {
-  margin-top: 16%;
+/* Góc: không có dải, nền kem; tên và quân đứng giữa ô */
+.tile-corner {
+  gap: 1px;
+  background: #fbf0d2;
+  font-size: calc(var(--b) * 0.0222);
+  color: #6b4a12;
 }
 
-/* Góc: không có dải, nền kem */
-.tile-corner {
-  background: #fbf0d2;
-  font-size: clamp(6.5px, 2.1vw, 10px);
-  color: #6b4a12;
+.tile-corner .tile-name {
+  margin: 0;
 }
 
 .tile-goToJail,
@@ -190,21 +226,87 @@
   z-index: 1;
 }
 
+/*
+ * Quân ở cạnh dưới ô. Hàng quân luôn giữ chỗ nên tên ô không bị che và không nhảy khi quân đi qua.
+ * Đông người: mỗi ô quân co lại để các quân xếp chồng lên nhau, vẫn nằm gọn trong ô.
+ */
 .tokens {
-  position: absolute;
-  bottom: 1px;
-  left: 0;
-  right: 0;
+  position: relative;
+  z-index: 1;
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0;
+  flex: none;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--tk);
   pointer-events: none;
 }
 
+.tokens-row {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.tokens-row + .tokens-row {
+  margin-top: calc(var(--tk) * -0.15);
+}
+
+.token-slot {
+  position: relative;
+  display: flex;
+  flex: 0 1 var(--tk);
+  min-width: 0;
+  height: var(--tk);
+}
+
+.token-slot:last-child {
+  flex-shrink: 0;
+}
+
+.token-slot.is-current {
+  z-index: 1;
+}
+
 .tokens .token-icon {
-  margin: 0 -2px;
-  border-width: 1.5px;
+  border-width: calc(var(--tk) * 0.11);
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* Quân nhỏ: hình kí hiệu to hơn trong vòng tròn để dễ nhận ra */
+.tokens .token-icon svg {
+  width: 72%;
+  height: 72%;
+}
+
+/* Người đang chơi trên bàn cờ: quân nhỏ nên nhấp nháy bằng cách đảo màu (nền màu, hình trắng), không tràn khỏi ô */
+.tokens .token-blink {
+  animation-name: token-blink-board;
+}
+
+@keyframes token-blink-board {
+  0%,
+  100% {
+    background: #fff;
+    color: var(--glow);
+  }
+  50% {
+    background: var(--glow);
+    color: #fff;
+  }
+}
+
+/* Quân đang đi: nhảy nhẹ mỗi khi sang ô mới */
+.token-slot.is-walking {
+  animation: token-hop 0.11s ease-out;
+}
+
+@keyframes token-hop {
+  0% {
+    transform: translateY(-40%);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .board-center {
@@ -222,7 +324,16 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sparkle::before,
-  .sparkle::after {
+  .sparkle::after,
+  .token-slot.is-walking {
     animation: none;
+  }
+
+  /* Không nhấp nháy: quân người đang chơi đứng yên ở dạng đảo màu */
+  .tokens .token-blink {
+    animation: none;
+    background: var(--glow);
+    color: #fff;
+    box-shadow: 0 0 0 1px #fff;
   }
 }

@@ -149,8 +149,8 @@ const GLYPHS: ReactNode[] = [
 interface TokenIconProps {
   icon: number;
   color: number;
-  /** Đường kính tính bằng px. */
-  size?: number;
+  /** Đường kính: số px, hoặc độ dài CSS (vd. "var(--tk)") để co giãn theo bàn cờ. */
+  size?: number | string;
   /** Nhấp nháy (người đang tới lượt). */
   blink?: boolean;
   /** Hiện tên kí hiệu khi đọc màn hình. */
@@ -160,6 +160,7 @@ interface TokenIconProps {
 /** Quân cờ: vòng tròn viền sáng theo màu người chơi, hình kí hiệu ở giữa. */
 export function TokenIcon({ icon, color, size = 28, blink = false, title }: TokenIconProps) {
   const c = colorOf(color);
+  const glyph = typeof size === 'number' ? size * 0.62 : '62%';
   return (
     <span
       className={`token-icon${blink ? ' token-blink' : ''}`}
@@ -167,7 +168,7 @@ export function TokenIcon({ icon, color, size = 28, blink = false, title }: Toke
       role="img"
       aria-label={title ?? ICON_NAMES[icon] ?? 'Quân cờ'}
     >
-      <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} aria-hidden="true">
+      <svg viewBox="0 0 24 24" width={glyph} height={glyph} aria-hidden="true">
         {GLYPHS[icon] ?? GLYPHS[0]}
       </svg>
     </span>

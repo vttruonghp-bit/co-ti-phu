@@ -31,8 +31,12 @@
   }
 }
 
+/* Không chuyển động: người đang chơi vẫn nổi bằng vòng sáng đứng yên. */
 @media (prefers-reduced-motion: reduce) {
   .token-blink {
     animation: none;
+    box-shadow:
+      0 0 0 2px #fff,
+      0 0 0 3.5px var(--glow);
   }
 }

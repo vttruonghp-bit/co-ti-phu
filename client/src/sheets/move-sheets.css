@@ -1,0 +1,409 @@
+/* Màn di chuyển: Metro, Ở tù, chọn ô Cao tốc / Canh bạc (hình 2 và hình 3) */
+
+/* Hộp hai con số: tiền lúc đến | phí (Metro), đất của mình | trung bình (Canh bạc) */
+.move-cash {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px 10px;
+}
+
+.move-cash > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.move-cash .right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.move-fee {
+  color: var(--blue);
+}
+
+.move-cash-note {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid rgb(74 127 193 / 22%);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.box-amber .move-cash-note {
+  border-top-color: rgb(229 131 44 / 25%);
+}
+
+/* Lưới 40 ô lấn vào lề màn một chút để tên ô dài (Landmark 81) vừa trên máy 360px */
+.sheet-body > .tile-grid {
+  margin-inline: -8px;
+}
+
+.move-grid-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: -4px;
+  scroll-margin-top: 8px;
+}
+
+.move-grid-head .eyebrow {
+  color: var(--ink);
+}
+
+.move-pill {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.move-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* Cuối màn: phần xem trước nằm ngay trên nút xác nhận */
+.move-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.move-footer > .btn {
+  width: 100%;
+}
+
+.move-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 66px;
+  padding: 8px 12px;
+  border: 1.5px solid #c9dbf0;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+
+.move-preview.is-empty {
+  border-style: dashed;
+  background: #f6f8fb;
+  border-color: var(--line);
+}
+
+.move-preview-route b {
+  font-weight: 900;
+}
+
+.move-preview-effect {
+  font-weight: 700;
+}
+
+.move-preview-effect.down {
+  color: var(--red);
+}
+
+.move-preview-effect.warn,
+.move-outcome-effect.warn {
+  color: var(--red);
+  font-weight: 800;
+}
+
+.move-preview-money {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.move-preview-money b {
+  color: var(--ink);
+}
+
+.move-preview-money b.up {
+  color: var(--teal);
+}
+
+.move-preview-money b.down {
+  color: var(--red);
+}
+
+/* Cao tốc: 4 kết quả của viên xúc xắc, mỗi kết quả một dòng */
+.move-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 3px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.move-outcomes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px 6px;
+  min-height: 24px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.move-outcomes .dice {
+  flex: none;
+  gap: 2px;
+  min-width: 49px;
+}
+
+/* Tên ô đích không co lại; thiếu chỗ thì hậu quả xuống dòng, canh phải */
+.move-outcome-to {
+  flex: 1 0 auto;
+  font-weight: 800;
+}
+
+.move-outcome-effect {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: right;
+}
+
+.move-outcome-effect.down {
+  color: var(--red);
+}
+
+/* Lá thẻ Khí Vận: nền xanh nhạt, viền đỏ, tên cam như ô Khí Vận trên bàn cờ */
+.move-banner {
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.move-banner.is-community {
+  background: #ddeefc;
+  box-shadow: inset 0 0 0 2px #d23c3c;
+}
+
+.move-banner-title {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #e57a1c;
+  text-shadow: 0 0 1px #7a3a00;
+}
+
+.move-banner p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.move-gamble .eyebrow {
+  color: #a3591a;
+}
+
+/* Ở tù */
+.move-last {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f3f6fa;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.move-last .dice {
+  gap: 3px;
+}
+
+.move-attempt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.move-attempt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 18px;
+  color: var(--red);
+}
+
+.move-attempt p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.move-attempt-dice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+}
+
+.move-pips {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.move-pips span {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--red);
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.move-pips .is-used {
+  background: var(--red);
+  opacity: 0.55;
+}
+
+.move-pips .is-now {
+  background: var(--red);
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgb(168 40 58 / 18%);
+}
+
+.move-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Cách ra tù: thẻ bấm chọn, viền đậm khi đang chọn */
+.move-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  min-height: 64px;
+  padding: 10px 14px 11px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.move-option-title {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.move-option-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.move-option-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.move-option-strong {
+  font-weight: 800;
+}
+
+.move-option.way-roll .move-option-title,
+.move-option.way-roll .move-option-foot {
+  color: var(--blue);
+}
+
+.move-option.way-card .move-option-title,
+.move-option.way-card .move-option-foot {
+  color: var(--teal);
+}
+
+.move-option.is-on {
+  border-width: 2.5px;
+  padding: 9px 13px 10px;
+}
+
+.move-option.way-roll.is-on {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.move-option.way-bail.is-on {
+  border-color: var(--navy);
+  background: #f3f6fa;
+}
+
+.move-option.way-card.is-on {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.move-option:disabled {
+  cursor: not-allowed;
+  background: #f6f7f9;
+}
+
+.move-option:disabled .move-option-title {
+  color: #8a93a5;
+}
+
+.move-option:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.move-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.move-warn .eyebrow {
+  color: #a3591a;
+}
+
+.move-warn p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.move-dest {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.move-dest .eyebrow {
+  color: var(--blue);
+}

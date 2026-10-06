@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   BOARD,
+  HOTEL_LEVEL,
   LOG_VISIBLE_ENTRIES,
   redeemCost,
   type Action,
@@ -19,6 +20,7 @@ import {
   signed,
   tileName,
 } from '../game/format';
+import { debtorOf } from '../game/draft';
 import type { HotSeatGame } from '../game/useHotSeat';
 import { AppearanceSheet } from '../sheets/AppearanceSheet';
 import { CardSheet } from '../sheets/CardSheet';
@@ -38,7 +40,8 @@ interface GameScreenProps {
   onNewGame: () => void;
 }
 
-type Manual = null | 'manage' | 'appearance' | 'surrender';
+/** 'board': tạm ẩn Xử lý nợ để xem bàn cờ (nút chính "Xử lý nợ" mở lại). */
+type Manual = null | 'manage' | 'appearance' | 'surrender' | 'board';
 
 /** Người ván đang chờ (người phải bấm nút tiếp theo); khi ván kết thúc là người giữ lượt cuối. */
 function waitingPlayer(s: GameState): PlayerState {
@@ -98,8 +101,10 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   const pendingCard = cardEvents[cardsSeen];
   const lastRoll = [...game.events].reverse().find((e) => e.type === 'roll');
   const dice = lastRoll?.type === 'roll' ? lastRoll.dice : (game.lastDice ?? null);
-  const rollerColor =
-    lastRoll?.type === 'roll' ? colorOf(playerById(game, lastRoll.playerId)!.color).main : null;
+  // Xúc xắc mang màu người gieo: lần đổ trong thao tác này, không thì người giữ lượt
+  // (lastDice bị xóa khi sang lượt mới nên luôn là của người giữ lượt).
+  const roller = lastRoll?.type === 'roll' ? playerById(game, lastRoll.playerId) : cur;
+  const rollerColor = colorOf((roller ?? cur).color).main;
 
   const sheetProps = {
     game,
@@ -109,6 +114,7 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   };
 
   // Màn phụ: thẻ vừa rút trước, rồi tới việc ván đang chờ, rồi các màn người chơi tự mở.
+  const debtor = debtorOf(game, previous);
   let sheet: ReactNode = null;
   if (pd.type === 'ended') {
     sheet = <GameOverSheet game={game} onNewGame={onNewGame} />;
@@ -124,12 +130,17 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
     sheet = <AppearanceSheet {...sheetProps} playerId={me.id} />;
   } else if (manual === 'surrender') {
     sheet = <SurrenderSheet {...sheetProps} playerId={me.id} />;
-  } else if (manual === 'manage') {
-    const mode: ManageMode =
-      pd.type === 'pay' && me.cash < pd.total ? 'debt' : canManage(game, me) ? 'manage' : 'view';
-    sheet = <ManageSheet {...sheetProps} mode={mode} playerId={me.id} />;
-  } else if (pd.type === 'pay' && me.cash < pd.total) {
-    sheet = <ManageSheet {...sheetProps} mode="debt" playerId={me.id} />;
+  } else if (manual === 'manage' || (debtor && manual !== 'board')) {
+    // Xử lý nợ là của người đang nợ (có thể không phải người giữ lượt), không đóng được.
+    const mode: ManageMode = debtor ? 'debt' : canManage(game, me) ? 'manage' : 'view';
+    sheet = (
+      <ManageSheet
+        {...sheetProps}
+        mode={mode}
+        playerId={debtor ?? me.id}
+        onShowBoard={() => setManual('board')}
+      />
+    );
   } else if (pd.type === 'metro') {
     sheet = <MetroSheet {...sheetProps} />;
   } else if (pd.type === 'jail' || pd.type === 'jailRelease') {
@@ -167,7 +178,7 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
       }
       case 'pay':
         if (me.cash < pd.total) {
-          return { label: 'Xử lý nợ', tone: 'btn-red', run: () => setManual(null) };
+          return { label: 'Xử lý nợ', tone: 'btn-red', run: () => setManual('manage') };
         }
         return pd.reason === 'tax'
           ? {
@@ -252,7 +263,6 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
           {secondary.label}
         </button>
       </div>
-      <p className="hint">{waitingText(game, me)}</p>
 
       <LogPanel game={game} />
 
@@ -264,7 +274,7 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
           ĐEN VL
         </button>
       </div>
-      <p className="hint center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
+      <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
 
       {sheet}
       {error && (
@@ -317,14 +327,15 @@ function PlayersBar({ game }: { game: GameState }) {
               className={`player-chip${p.status !== 'active' ? ' is-out' : ''}`}
               style={{ borderColor: `color-mix(in srgb, ${c.main} 35%, #dfe5ee)` }}
             >
-              <TokenIcon icon={p.icon} color={p.color} size={24} />
+              <TokenIcon icon={p.icon} color={p.color} size={20} />
               <span className="player-chip-text">
                 <span className="player-chip-top">
                   <b>{p.name}</b>
                   <span>{money(p.cash)}</span>
                 </span>
+                {/* "đất" như hình mẫu (gồm cả ga, nhà máy) để vừa 3 cột ở màn 360px */}
                 <span className="player-chip-sub">
-                  {assetCount(game, p.id)} tài sản · {p.heldCards.length} thẻ
+                  {assetCount(game, p.id)} đất · {p.heldCards.length} thẻ
                 </span>
               </span>
             </div>
@@ -341,7 +352,7 @@ interface CenterPanelProps {
   tile: number;
   viewing: boolean;
   dice: readonly number[] | null;
-  diceColor: string | null;
+  diceColor: string;
   rollKey: number;
 }
 
@@ -398,12 +409,17 @@ function cashAfter(game: GameState, me: PlayerState): number | null {
   return null;
 }
 
+/** Cấp nhà như hình mẫu: "2 / 4 nhà". */
+function levelLabel(level: number): string {
+  return level > 0 && level < HOTEL_LEVEL ? `${level} / 4 nhà` : levelText(level);
+}
+
 function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: CenterPanelProps) {
   const t = BOARD[tile]!;
   const st = game.tiles[tile];
   const owner = playerById(game, st?.owner);
   const after = viewing ? null : cashAfter(game, me);
-  const c = colorOf(me.color);
+  const isTurn = game.players[game.current]?.id === me.id;
   const [rolling, setRolling] = useState(false);
   useEffect(() => {
     if (!game.events.some((e) => e.type === 'roll')) return;
@@ -417,7 +433,9 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
       <div className="center-turn">
         <TokenIcon icon={me.icon} color={me.color} size={30} blink />
         <div className="center-turn-main">
-          <span className="center-turn-label">Lượt của {me.name}</span>
+          <span className="center-turn-label">
+            {isTurn ? `Lượt của ${me.name}` : `Đang chờ ${me.name}`}
+          </span>
           <span className="center-turn-cash">{money(me.cash)}</span>
         </div>
         <div className="center-turn-side">
@@ -428,15 +446,11 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
 
       <div className="center-tile">
         <div className="center-tile-head">
-          <span className="eyebrow">{viewing ? 'Ô đang xem' : 'Ô đang đứng'}</span>
+          <span className="eyebrow">
+            {viewing ? 'Ô đang xem · chạm lại để đóng' : 'Ô đang đứng'}
+          </span>
           {dice && !viewing && (
-            <Dice
-              values={dice}
-              color={diceColor ?? c.main}
-              size={24}
-              rolling={rolling}
-              key={rollKey}
-            />
+            <Dice values={dice} color={diceColor} size={24} rolling={rolling} key={rollKey} />
           )}
         </div>
         <h2 className="center-tile-name">{t.name}</h2>
@@ -450,12 +464,10 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
         {owner && (
           <div className="center-info">
             <div>
-              <span className="eyebrow">
-                {t.kind === 'property' ? 'Cấp nhà' : t.kind === 'station' ? 'Loại' : 'Loại'}
-              </span>
+              <span className="eyebrow">{t.kind === 'property' ? 'Cấp nhà' : 'Loại'}</span>
               <b>
                 {t.kind === 'property'
-                  ? levelText(st!.level)
+                  ? levelLabel(st!.level)
                   : t.kind === 'station'
                     ? 'Ga tàu'
                     : 'Nhà máy'}
@@ -467,15 +479,18 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
             </div>
           </div>
         )}
-        {after !== null && (
-          <div className="center-after">
-            <span>Tiền của {me.name} sau giao dịch</span>
-            <b>
-              {money(me.cash)} <span aria-hidden="true">→</span>{' '}
-              <span className={after < me.cash ? 'down' : 'up'}>{money(after)}</span>
-            </b>
-          </div>
-        )}
+        <div className="center-foot">
+          {after !== null && (
+            <div className="center-after">
+              <span>Tiền của {me.name} sau giao dịch</span>
+              <b>
+                {money(me.cash)} <span aria-hidden="true">→</span>{' '}
+                <span className={after < me.cash ? 'down' : 'up'}>{money(after)}</span>
+              </b>
+            </div>
+          )}
+          <p className="center-wait">{waitingText(game, me)}</p>
+        </div>
       </div>
     </div>
   );

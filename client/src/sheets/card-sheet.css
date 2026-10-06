@@ -1,0 +1,683 @@
+/* Thẻ Cơ Hội / Khí Vận và kết quả Cao tốc (hình 3) */
+
+.draw-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Lá thẻ: Cơ Hội viền cam nền hồng nhạt, Khí Vận viền đỏ nền xanh nhạt (giống ô trên bàn cờ) */
+.draw-stage {
+  perspective: 900px;
+}
+
+.draw-card {
+  --deck: #ec8a2e;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 14px;
+  border: 2.5px solid var(--deck);
+  border-radius: 14px;
+  background: linear-gradient(160deg, #fff7ef, #fde3e1);
+  box-shadow:
+    inset 0 0 0 3px #fff,
+    0 6px 16px rgb(27 39 64 / 10%);
+  animation: draw-flip 0.55s cubic-bezier(0.2, 0.75, 0.3, 1.15) both;
+  transform-origin: 50% 60%;
+}
+
+.draw-card-community {
+  --deck: #d23c3c;
+  background: linear-gradient(160deg, #f1f8ff, #ddeefc);
+}
+
+.draw-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.draw-card-deck {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--deck);
+}
+
+.draw-card-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.draw-card-title {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: #a5490c;
+  overflow-wrap: anywhere;
+}
+
+.draw-card-community .draw-card-title {
+  color: #d9661a;
+  text-shadow: 0 0 1px #7a3a00;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.draw-card-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* Các phần sau lá thẻ hiện dần sau khi lật */
+.draw-body > :not(.draw-stage) {
+  animation: draw-rise 0.32s ease-out both;
+  animation-delay: 0.38s;
+}
+
+.draw-body > :nth-child(3) {
+  animation-delay: 0.48s;
+}
+
+.draw-body > :nth-child(n + 4) {
+  animation-delay: 0.58s;
+}
+
+@keyframes draw-flip {
+  from {
+    transform: rotateY(-95deg) scale(0.9);
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+
+@keyframes draw-rise {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+
+.draw-explain {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f3f6fa;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Kết quả: ai đổi bao nhiêu tiền */
+.draw-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+.draw-result .eyebrow,
+.draw-route .eyebrow,
+.draw-detail > .eyebrow {
+  color: var(--ink);
+}
+
+.draw-money,
+.draw-notes,
+.draw-route ul,
+.draw-grid,
+.draw-table,
+.draw-steps,
+.draw-seats ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draw-money {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.draw-money li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+
+.draw-money-flow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.draw-money li > b {
+  min-width: 56px;
+  font-size: 16px;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.draw-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 15px;
+}
+
+.draw-who b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draw-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.draw-notes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 5px;
+}
+
+.draw-notes li::before {
+  content: '•';
+  color: var(--muted);
+}
+
+.draw-note-amount {
+  margin-left: auto;
+}
+
+.draw-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Đường đi của quân */
+.draw-route {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.draw-route ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.draw-route li,
+.draw-step-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 15px;
+}
+
+.draw-route li {
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #f3f6fa;
+}
+
+.draw-arrow {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.draw-chip {
+  display: inline-block;
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px currentColor;
+  align-self: flex-start;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Phần chi tiết riêng của từng thẻ */
+.draw-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.draw-detail-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.draw-detail-note b {
+  color: var(--ink);
+}
+
+.draw-dice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f3f6fa;
+}
+
+.draw-dice .dice {
+  flex: none;
+}
+
+.draw-dice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.draw-dice-text > b {
+  font-size: 16px;
+}
+
+.draw-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 6px;
+}
+
+.draw-table li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.draw-table li b {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.draw-table li.is-hit {
+  border-color: var(--who);
+  background: var(--who-soft);
+  color: var(--ink);
+}
+
+.draw-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.draw-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f3f6fa;
+}
+
+.draw-step-head {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+/* Lưới người chơi (Cháy nhà, Tái cơ cấu) */
+.draw-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.draw-head-row .eyebrow {
+  color: var(--ink);
+}
+
+.draw-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--orange-soft);
+  color: #a5490c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.draw-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.draw-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.draw-grid-value {
+  padding-left: 28px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.draw-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.draw-sum-formula {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.draw-sum-result {
+  margin: 0;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.draw-sum-total {
+  font-size: 22px;
+  font-weight: 900;
+  white-space: nowrap;
+  color: var(--blue);
+}
+
+.box-amber .draw-sum-total {
+  color: #b4530f;
+}
+
+.draw-sum-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.draw-sum-note b {
+  color: var(--ink);
+}
+
+.draw-burn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1.5px solid #f2c9a8;
+  border-radius: 12px;
+  background: #fff5ee;
+}
+
+.draw-burn .eyebrow {
+  color: #b4530f;
+}
+
+.draw-burn.is-miss {
+  border-color: var(--line);
+  background: #f3f6fa;
+}
+
+.draw-burn.is-miss .eyebrow {
+  color: var(--muted);
+}
+
+.draw-burn-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 10px;
+  font-size: 18px;
+}
+
+.draw-burn-level {
+  color: #b4530f;
+  white-space: nowrap;
+}
+
+.draw-burn p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.draw-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f6fa;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.draw-verdict > b {
+  font-size: 17px;
+}
+
+/* Thằng Bờm */
+.draw-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.draw-seats .eyebrow {
+  color: var(--purple);
+}
+
+.draw-seats ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 6px;
+}
+
+.draw-seats li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 16px 4px 6px;
+  border: 1.5px solid #ded3f1;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.draw-seats li.is-picked {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 2px rgb(123 79 192 / 25%);
+}
+
+.draw-seat-num {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--purple);
+}
+
+.draw-seat-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.draw-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.draw-pair .draw-dice {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  background: var(--purple-soft);
+}
+
+.draw-pair .draw-dice-text {
+  font-size: 13px;
+}
+
+.draw-asset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1.5px solid;
+  border-radius: 12px;
+}
+
+.draw-asset-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.draw-asset-name {
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.draw-asset-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Canh bạc */
+.draw-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.draw-compare > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.draw-compare .right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.draw-compare-sign {
+  font-size: 26px;
+  font-weight: 900;
+  color: #b4530f;
+}
+
+/* Cao tốc */
+.draw-highway {
+  gap: 10px;
+}
+
+.draw-highway .draw-dice {
+  background: rgb(255 255 255 / 70%);
+}
+
+.draw-highway-roll {
+  font-size: 22px;
+}
+
+/* Cuối màn: việc kế tiếp nằm ngay trên nút */
+.draw-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.draw-footer .btn {
+  width: 100%;
+}
+
+.draw-next {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw-card,
+  .draw-body > :not(.draw-stage) {
+    animation: none;
+  }
+}
