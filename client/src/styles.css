@@ -1,75 +1,248 @@
 :root {
-  font-family: system-ui, sans-serif;
-  color: #1f2933;
-  background: #f4f1ea;
+  --ink: #1b2740;
+  --muted: #6b7790;
+  --line: #dfe5ee;
+  --bg: #eef2f7;
+  --card: #ffffff;
+  --navy: #1b2740;
+  --teal: #12876f;
+  --teal-soft: #e5f3ee;
+  --blue: #4a7fc1;
+  --blue-soft: #e9f1fa;
+  --red: #a8283a;
+  --red-soft: #fbecee;
+  --orange: #e5832c;
+  --orange-soft: #fdf1e6;
+  --purple: #7b4fc0;
+  --purple-soft: #f2ecfa;
+  --amber-soft: #fdf5e6;
+  /* Màu của người đang tới lượt; GameScreen đặt lại theo người chơi. */
+  --accent: var(--teal);
+  --accent-soft: var(--teal-soft);
+  --radius: 14px;
+  font-family:
+    'Be Vietnam Pro',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Noto Sans',
+    sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--bg);
 }
 
-.app {
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Khung điện thoại: dọc 19:9, tối đa 480px khi mở trên máy tính */
+.phone {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 10px 12px 20px;
+  background: #f8fafc;
+}
+
+.app-header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px;
-}
-
-.status {
-  margin: 0 0 12px;
-  font-size: 14px;
-}
-
-.board {
-  display: grid;
-  grid-template-columns: repeat(11, 1fr);
-  grid-template-rows: repeat(11, 1fr);
-  gap: 2px;
-  width: min(100%, 880px);
-  aspect-ratio: 1;
-  background: #2f3e46;
-  border: 2px solid #2f3e46;
-}
-
-.tile {
-  display: flex;
-  flex-direction: column;
+  align-items: baseline;
   justify-content: space-between;
-  padding: 4px;
-  background: #fffdf7;
-  font-size: clamp(7px, 1.2vw, 12px);
-  overflow: hidden;
+  gap: 8px;
+  padding: 2px 2px 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
 }
 
-.tile-name {
-  font-weight: 600;
+.app-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 
-.tile-station {
-  background: #e9eef2;
+.app-turn {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
-.tile-utility {
-  background: #fff4d6;
+.eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.tile-chance,
-.tile-community {
-  background: #e6f4ea;
-}
-
-.tile-tax {
-  background: #fde8e8;
-}
-
-.board-center {
-  grid-row: 2 / 11;
-  grid-column: 2 / 11;
-  display: flex;
+/* Nút */
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #cfe3d4;
-  font-size: clamp(24px, 6vw, 56px);
+  gap: 6px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border-color: #c9d2df;
+}
+
+.btn-teal {
+  background: var(--teal);
+}
+
+.btn-blue {
+  background: var(--blue);
+}
+
+.btn-red {
+  background: var(--red);
+}
+
+.btn-orange {
+  background: var(--orange);
+}
+
+.btn-purple {
+  background: var(--purple);
+}
+
+.btn-soft {
+  background: var(--blue-soft);
+  color: var(--ink);
+  border-color: #d3dfef;
+}
+
+.btn-small {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-row > .btn {
+  flex: 1;
+}
+
+.btn-row > .btn-grow {
+  flex: 2.2;
+}
+
+/* Hộp thông tin dùng lại ở nhiều màn */
+.box {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f6fa;
+}
+
+.box-teal {
+  background: var(--teal-soft);
+}
+
+.box-blue {
+  background: var(--blue-soft);
+  border: 1.5px solid #c9dbf0;
+}
+
+.box-red {
+  background: var(--red-soft);
+  border: 1.5px solid #f0c3c9;
+}
+
+.box-amber {
+  background: var(--amber-soft);
+}
+
+.box-purple {
+  background: var(--purple-soft);
+}
+
+.money-big {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.up {
+  color: var(--teal);
+}
+
+.down {
+  color: var(--red);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 50;
+  transform: translateX(-50%);
+  max-width: min(440px, calc(100% - 32px));
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #2a1a20;
+  color: #fff;
+  font-size: 14px;
   font-weight: 700;
-  color: #2f3e46;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

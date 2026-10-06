@@ -72,7 +72,7 @@ _Cập nhật 06/10/2026. Gộp từ file luật đầu tiên, các câu trả l
 - **Đất màu, ga, nhà máy vô chủ:** được mua theo giá gốc. Không mua thì vẫn vô chủ.
 - **Của người khác, đang hoạt động:** trả tiền thuê (nút Trả tiền). Ô **đang cắm** không thu tiền. Chủ đang ở tù vẫn thu.
 - **Đất màu của mình:** mỗi lần dừng được nâng **tối đa 1 cấp**: đất trống, 1 nhà, 2 nhà, 3 nhà, 4 nhà, khách sạn. Lượt vừa mua chưa được nâng.
-- **Đất màu của mình đang cắm:** khi dừng được chuộc và nâng lên 1 nhà cùng lúc (trả tiền chuộc cộng tiền xây). Ga và nhà máy đang cắm chỉ được chuộc.
+- **Đất màu của mình đang cắm:** khi dừng được chuộc và nâng lên 1 nhà cùng lúc (trả tiền chuộc cộng tiền xây). Chỉ đủ tiền chuộc thì được chuộc riêng (55%). Ga và nhà máy đang cắm chỉ được chuộc.
 - **Ga:** thuê theo số ga **đang hoạt động** của chủ: 25/50/100/200Đ cho 1/2/3/4 ga.
 - **Nhà máy:** tổng 2 xúc xắc × 4 (chủ có 1 nhà máy hoạt động) hoặc × 10 (cả 2). Nếu đến nhà máy không phải bằng lần đổ 2 xúc xắc để đi (Metro, Cao tốc, Tàu bay, thẻ) thì máy chủ gieo 2 viên mới để tính (mặc định).
 - **Mua, nâng cấp, chuộc + nâng** là tự nguyện nên phải đủ tiền mặt sẵn; không được Ụp/Mở giữa lượt để lấy tiền cho các việc này (mặc định).
@@ -217,3 +217,16 @@ Người rút phải trả cho nhiều người (Bầu tổng thống, Ủng h�
 - **Đen vl (đổi quân):** một dòng 8 màu, bên dưới 20 biểu tượng đổi màu theo màu đang chọn; 2 nút "Chung thủy" và "Ném mẹ [biểu tượng cũ] con này đi".
 - **Cao tốc và Metro:** màn chọn ô luôn hiện đủ 40 ô.
 - **Đầu hàng:** giao diện đỏ đen, có bước xác nhận cuối.
+
+## 13. Tình huống hiếm (Wins chốt 06/10/2026)
+
+1. Dừng ở đất màu của mình đang cắm mà chỉ đủ tiền chuộc: được chuộc riêng (55%) ngay lúc dừng.
+2. Dừng nhiều lần ở cùng một đất của mình trong một lượt: mỗi lần dừng được nâng 1 cấp.
+3. Đất có được do thẻ bắt buộc mua tính là "lượt vừa mua", lượt đó chưa được nâng.
+4. Canh bạc xây dựng vẫn nâng được đất vừa mua trong lượt (hiệu ứng thẻ, không phải nâng cấp thường).
+5. Thằng Bờm viên 2 lẻ: ga hoặc nhà máy đang cắm của đối thủ vẫn bị lấy, giữ nguyên trạng thái cắm.
+6. Trả tiền nước khi người rút là chủ Nhà Máy Nước: giống tiền điện, chỉ trả Ngân hàng 80%.
+7. Lật ngược tình thế, Ủng hộ người nghèo, Ngân hàng tái cơ cấu tính theo tiền mặt sau khi đã nhận 200Đ qua ô 00 trong cùng lần đi.
+8. Xúc xắc do thẻ gieo ra đôi không được thêm lượt; chỉ lần đổ để đi mới tính đôi.
+9. Khoản 10 × xúc xắc của thẻ Đất gần nhất / Đến ga gần nhất phải bấm "Trả tiền" như tiền thuê; các khoản trả khác của thẻ tự trừ.
+10. Đen vl (đổi màu và kí hiệu) dùng được bất cứ lúc nào, kể cả ngoài lượt mình.

@@ -22,7 +22,7 @@ import {
   utilityMultiplier,
 } from './core';
 import { rollDie, shuffle, type Rng } from './rng';
-import type { Creditor, GameState, PlayerState, Step } from './types';
+import type { CardDetail, Creditor, GameEvent, GameState, PlayerState, Step } from './types';
 
 const ALL_CARDS: Record<DeckKind, readonly Card[]> = {
   chance: CHANCE_CARDS,
@@ -41,6 +41,7 @@ const bankPay = (
   amount: number,
   reason: 'tax' | 'card' | 'purchase',
   confirm: boolean,
+  label?: string,
   grantTile?: number,
 ): Step => ({
   type: 'pay',
@@ -49,6 +50,7 @@ const bankPay = (
   total: amount,
   reason,
   confirm,
+  ...(label === undefined ? {} : { label }),
   ...(grantTile === undefined ? {} : { grantTile }),
 });
 
@@ -82,7 +84,7 @@ export function land(s: GameState, p: PlayerState, rng: Rng, opts: LandOptions =
         addLog(s, p.id, `Dùng quyền Người thủ đô, miễn ${tile.name}`);
         return { steps: [], net: 0 };
       }
-      return { steps: [bankPay(p, tile.amount, 'tax', true)], net: 0 };
+      return { steps: [bankPay(p, tile.amount, 'tax', true, `Nộp ${tile.name}`)], net: 0 };
     case 'chance':
     case 'community':
       return drawCard(s, p, tile.kind, rng);
@@ -97,6 +99,7 @@ function landOwnable(
   index: number,
   rng: Rng,
   opts: LandOptions,
+  ev?: Extract<GameEvent, { type: 'card' }>,
 ): Outcome {
   const tile = ownableTile(index);
   const t = s.tiles[index]!;
@@ -105,7 +108,10 @@ function landOwnable(
   if (t.owner === null) {
     if (opts.nearestMultiplier !== undefined) {
       addLog(s, p.id, `Bắt buộc mua ${tile.name}`);
-      return { steps: [bankPay(p, tile.price, 'purchase', false, index)], net: 0 };
+      return {
+        steps: [bankPay(p, tile.price, 'purchase', false, `Mua ${tile.name} (thẻ)`, index)],
+        net: 0,
+      };
     }
     if (p.cash < tile.price) {
       addLog(s, p.id, `Không đủ tiền mua ${tile.name}`);
@@ -116,16 +122,22 @@ function landOwnable(
 
   if (t.owner === p.id) {
     if (tile.kind === 'property') {
-      // Lượt vừa mua chưa được nâng (chuộc ga, nhà máy thì vẫn được).
-      if (t.boughtTurn === s.turnNumber) return none;
+      // Lượt vừa mua chưa được nâng; chuộc thì không phải nâng cấp nên vẫn được.
+      const justBought = t.boughtTurn === s.turnNumber;
       if (t.mortgaged) {
-        return p.cash >= redeemCost(tile.price) + tile.upgradeCost
-          ? {
-              steps: [{ type: 'upgrade', playerId: p.id, tile: index, mode: 'redeemBuild' }],
-              net: 0,
-            }
+        const redeem = redeemCost(tile.price);
+        // Đủ tiền thì chuộc + xây 1 nhà; chỉ đủ tiền chuộc thì chuộc riêng.
+        const mode =
+          !justBought && p.cash >= redeem + tile.upgradeCost
+            ? 'redeemBuild'
+            : p.cash >= redeem
+              ? 'redeem'
+              : null;
+        return mode
+          ? { steps: [{ type: 'upgrade', playerId: p.id, tile: index, mode }], net: 0 }
           : none;
       }
+      if (justBought) return none;
       return t.level < HOTEL_LEVEL && p.cash >= tile.upgradeCost
         ? { steps: [{ type: 'upgrade', playerId: p.id, tile: index, mode: 'build' }], net: 0 }
         : none;
@@ -147,6 +159,7 @@ function landOwnable(
     const d2 = rollDie(rng);
     amount = (d1 + d2) * opts.nearestMultiplier;
     net = -amount;
+    if (ev) ev.detail = { kind: 'dice', dice: [d1, d2] };
     addLog(s, p.id, `Gieo ${d1} + ${d2}, trả ${opts.nearestMultiplier} × ${d1 + d2}`);
   } else if (tile.kind === 'property') {
     if (hasCard(p, 'rentWaiver')) {
@@ -179,6 +192,7 @@ function landOwnable(
         total: amount,
         reason: opts.nearestMultiplier !== undefined ? 'card' : 'rent',
         confirm: true,
+        label: `${opts.nearestMultiplier !== undefined ? 'Trả' : 'Trả thuê'} ${tile.name}`,
       },
     ],
     net,
@@ -195,13 +209,31 @@ function drawCard(s: GameState, p: PlayerState, deck: DeckKind, rng: Rng): Outco
   }
   const card = getCard(s.decks[deck].shift()!);
   addLog(s, p.id, `Rút thẻ ${deck === 'chance' ? 'Cơ Hội' : 'Khí Vận'}: ${card.title}`);
-  const out = applyCard(s, p, card, rng);
+  const ev: Extract<GameEvent, { type: 'card' }> = {
+    type: 'card',
+    playerId: p.id,
+    cardId: card.id,
+  };
+  s.events.push(ev);
+  const out = applyCard(s, p, card, rng, ev);
+  for (const step of out.steps) {
+    if (step.type === 'pay' && step.label === undefined) step.label = `Thẻ ${card.title}`;
+  }
   if (out.net !== 0) out.steps.push({ type: 'fortuneMirror', drawerId: p.id, net: out.net });
   return out;
 }
 
-function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome {
+function applyCard(
+  s: GameState,
+  p: PlayerState,
+  card: Card,
+  rng: Rng,
+  ev: Extract<GameEvent, { type: 'card' }>,
+): Outcome {
   const e = card.effect;
+  const detail = (d: CardDetail) => {
+    ev.detail = d;
+  };
   const received = (amount: number): Outcome => {
     p.cash += amount;
     addLog(s, p.id, card.title, amount);
@@ -219,16 +251,17 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
       const target = nearestAhead(p.position, e.target).index;
       moveForwardTo(s, p, target, e.collectGo);
       s.arrivedByRoll = false;
-      return landOwnable(s, p, target, rng, { nearestMultiplier: e.diceMultiplier });
+      return landOwnable(s, p, target, rng, { nearestMultiplier: e.diceMultiplier }, ev);
     }
     case 'moveBack':
-      moveBack(p, e.steps);
+      moveBack(s, p, e.steps);
       return { ...arrive(), net: 0 };
     case 'flyDice': {
       const dice = [rollDie(rng), rollDie(rng)];
+      detail({ kind: 'dice', dice });
       for (const d of dice) {
         if (d % 2 === 0) moveForward(s, p, d, true);
-        else moveBack(p, d);
+        else moveBack(s, p, d);
       }
       addLog(s, p.id, `Tàu bay: ${dice.join(', ')}`);
       return { ...arrive(), net: 0 };
@@ -283,6 +316,7 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
     }
     case 'lottery': {
       const d = rollDie(rng) as 1 | 2 | 3 | 4 | 5 | 6;
+      detail({ kind: 'dice', dice: [d] });
       addLog(s, p.id, `Xổ số ra ${d}`);
       return received(e.payouts[d]);
     }
@@ -329,6 +363,7 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
       const counts = actives.map((x) => ownedProperties(s, x.id).length);
       const average = counts.reduce((a, b) => a + b, 0) / actives.length;
       const mine = ownedProperties(s, p.id).length;
+      detail({ kind: 'gamble', mine, average });
       if (mine === average) return { steps: [], net: 0 };
       const up = mine < average;
       const options = ownedProperties(s, p.id).filter((i) => {
@@ -348,15 +383,19 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
     }
     case 'neighborFire': {
       let total = 0;
+      const rolls: { playerId: string; dice: [number, number] }[] = [];
       for (const x of [p, ...othersInSeatOrder(s, p.id)]) {
         const d1 = rollDie(rng);
         const d2 = rollDie(rng);
         total += d1 + d2;
+        rolls.push({ playerId: x.id, dice: [d1, d2] });
         addLog(s, x.id, `Gieo ${d1} + ${d2}`);
       }
       const target = (p.position + total) % BOARD_SIZE;
       const t = s.tiles[target];
-      if (BOARD[target]!.kind === 'property' && t && t.level >= 1) {
+      const hit = BOARD[target]!.kind === 'property' && !!t && t.level >= 1;
+      detail({ kind: 'fire', rolls, total, target, hit });
+      if (hit && t) {
         t.level -= 1;
         addLog(s, p.id, `Cháy ${BOARD[target]!.name}: hạ 1 cấp`);
       } else {
@@ -367,6 +406,12 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
     case 'bankRestructure': {
       const actives = activePlayers(s);
       const average = Math.floor(actives.reduce((a, x) => a + x.cash, 0) / actives.length);
+      detail({
+        kind: 'restructure',
+        cash: actives.map((x) => ({ playerId: x.id, cash: x.cash })),
+        average,
+        before: p.cash,
+      });
       const delta = average - p.cash;
       p.cash = average;
       addLog(s, p.id, 'Ngân hàng tái cơ cấu', delta);
@@ -387,8 +432,9 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
     case 'swapProperty': {
       const opponents = othersInSeatOrder(s, p.id);
       if (opponents.length === 0) return { steps: [], net: 0 };
-      let d1 = rollDie(rng);
-      while (d1 > opponents.length) d1 = rollDie(rng);
+      const die1 = [rollDie(rng)];
+      while (die1.at(-1)! > opponents.length) die1.push(rollDie(rng));
+      const d1 = die1.at(-1)!;
       const opp = opponents[d1 - 1]!;
       const d2 = rollDie(rng);
       const mine = cheapestProperty(s, p.id);
@@ -407,6 +453,7 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
         }
       }
       addLog(s, p.id, `Thằng Bờm: viên 1 ra ${d1} (${opp.name}), viên 2 ra ${d2}`);
+      detail({ kind: 'swap', opponentId: opp.id, die1, die2: d2, mine, theirs });
       if (mine === null || theirs === null) {
         return {
           steps: [
@@ -417,6 +464,7 @@ function applyCard(s: GameState, p: PlayerState, card: Card, rng: Rng): Outcome 
               total: e.penalty,
               reason: 'swapPenalty',
               confirm: false,
+              label: 'Phạt Thằng Bờm',
             },
           ],
           net: e.penalty,

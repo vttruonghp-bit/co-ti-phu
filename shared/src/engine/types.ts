@@ -63,6 +63,8 @@ export type Pending =
       confirm: boolean;
       /** Ô được nhận sau khi trả (thẻ bắt buộc mua). */
       grantTile?: number;
+      /** Dòng nhật ký khi trả, ví dụ "Trả thuê Hội An". */
+      label?: string;
     }
   | {
       type: 'chooseTile';
@@ -88,6 +90,47 @@ export interface LogEntry {
   amount?: number;
 }
 
+/** Chi tiết riêng của một số thẻ, để giao diện hiện lại diễn biến. */
+export type CardDetail =
+  /** Xúc xắc thẻ tự gieo: Xổ số (1 viên), Tàu bay, tiền 10 × của thẻ Đất/Ga gần nhất. */
+  | { kind: 'dice'; dice: number[] }
+  | {
+      kind: 'fire';
+      rolls: { playerId: string; dice: [number, number] }[];
+      total: number;
+      target: number;
+      /** Ô đích có công trình và bị hạ 1 cấp. */
+      hit: boolean;
+    }
+  | {
+      kind: 'restructure';
+      cash: { playerId: string; cash: number }[];
+      average: number;
+      before: number;
+    }
+  | {
+      kind: 'swap';
+      opponentId: string;
+      /** Các lần gieo viên 1 (gieo lại khi lớn hơn số đối thủ). */
+      die1: number[];
+      die2: number;
+      /** Đất màu rẻ nhất của người rút, null nếu không có. */
+      mine: number | null;
+      /** Tài sản lấy của đối thủ, null nếu đối thủ không có. */
+      theirs: number | null;
+    }
+  | { kind: 'gamble'; mine: number; average: number };
+
+/** Những gì vừa xảy ra trong thao tác cuối cùng, để giao diện hiện xúc xắc, thẻ và đường đi. */
+export type GameEvent =
+  /** Đổ 2 xúc xắc để đi, hoặc thử đổ đôi trong tù. */
+  | { type: 'roll'; playerId: string; dice: [number, number]; jail: boolean }
+  | { type: 'move'; playerId: string; from: number; to: number; passedGo: boolean }
+  | { type: 'jail'; playerId: string }
+  | { type: 'card'; playerId: string; cardId: string; detail?: CardDetail }
+  /** Thẻ Mở đường cao tốc: ô đã chọn, viên xúc xắc và ô đến. */
+  | { type: 'highway'; playerId: string; tile: number; die: number; to: number };
+
 export interface GameState {
   players: PlayerState[];
   /** Chỉ số người đang chơi lượt trong `players`. */
@@ -107,6 +150,8 @@ export interface GameState {
   pending: Pending;
   queue: Step[];
   log: LogEntry[];
+  /** Diễn biến của thao tác cuối cùng (xóa đầu mỗi thao tác). */
+  events: GameEvent[];
   loserId: string | null;
 }
 

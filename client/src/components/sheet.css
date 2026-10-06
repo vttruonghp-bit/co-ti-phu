@@ -1,0 +1,112 @@
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  background: rgb(27 39 64 / 35%);
+  animation: sheet-fade 0.18s ease-out;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  padding: 10px 12px 12px;
+  background: #f8fafc;
+  animation: sheet-up 0.22s ease-out;
+}
+
+.sheet-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 10px;
+}
+
+.sheet-icon {
+  display: flex;
+}
+
+.sheet-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.sheet-subtitle {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sheet-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 6px 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet-footer {
+  padding: 10px 16px 16px;
+  border-top: 1px solid #eef1f5;
+  background: #fff;
+}
+
+.sheet-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 2.5px solid currentColor;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 10px 2px color-mix(in srgb, var(--glow) 45%, transparent);
+  font-size: 22px;
+}
+
+.sheet-glyph svg {
+  width: 24px;
+  height: 24px;
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet-backdrop {
+    animation: none;
+  }
+}

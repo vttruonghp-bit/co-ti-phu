@@ -1,0 +1,216 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  BOARD,
+  BOARD_SIZE,
+  HOTEL_LEVEL,
+  gridPosition,
+  type GameState,
+  type PlayerState,
+  type Tile,
+} from '@cotiphu/shared';
+import { SHORT_NAMES, playerById } from '../game/format';
+import { colorOf } from '../theme';
+import { TokenIcon } from './TokenIcon';
+import './board.css';
+
+interface BoardProps {
+  game: GameState;
+  /** Ô đang được làm nổi (thường là ô người tới lượt đang đứng). */
+  focus?: number | null;
+  onTileClick?: (index: number) => void;
+  /** Nội dung ô trung tâm 9×9. */
+  children?: ReactNode;
+}
+
+/** Thời gian quân đi qua mỗi ô khi vừa đổ xúc xắc. */
+const STEP_MS = 110;
+
+function cornerSide(tile: Tile): string {
+  const { row, col } = gridPosition(tile.index);
+  if (row === 10) return 'bottom';
+  if (row === 0) return 'top';
+  if (col === 0) return 'left';
+  return 'right';
+}
+
+/** Dải trên ô đất: 5 đoạn (4 nhà + khách sạn), tô đậm theo màu chủ đến cấp hiện tại. */
+function LevelStrip({ level, color }: { level: number; color: string | null }) {
+  return (
+    <span className="strip" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((k) => (
+        <span
+          key={k}
+          className="strip-seg"
+          style={
+            color
+              ? { background: color, opacity: level >= k ? 1 : 0.28 }
+              : { background: '#d9dee7' }
+          }
+        />
+      ))}
+    </span>
+  );
+}
+
+interface Walk {
+  playerId: string;
+  from: number;
+  steps: number;
+}
+
+/** Lần đi theo 2 xúc xắc trong thao tác vừa rồi; đi bằng thẻ, Metro, vào tù thì nhảy thẳng. */
+function walkOf(game: GameState): Walk | null {
+  const ev = game.events;
+  for (let i = 0; i + 1 < ev.length; i++) {
+    const r = ev[i]!;
+    const m = ev[i + 1]!;
+    if (r.type !== 'roll' || m.type !== 'move' || m.playerId !== r.playerId) continue;
+    const steps = (m.to - m.from + BOARD_SIZE) % BOARD_SIZE;
+    if (steps > 0 && steps === r.dice[0] + r.dice[1]) {
+      return { playerId: m.playerId, from: m.from, steps };
+    }
+  }
+  return null;
+}
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
+/** Quân vừa đổ xúc xắc đi từng ô tới chỗ mới; trả về ô đang vẽ của quân đó trong lúc đi. */
+function useWalk(game: GameState): { playerId: string; at: number } | null {
+  const walk = useMemo(() => (reducedMotion() ? null : walkOf(game)), [game]);
+  const [progress, setProgress] = useState({ game, step: 0 });
+  const step = progress.game === game ? progress.step : 0;
+  const walking = walk !== null && step < walk.steps;
+  useEffect(() => {
+    if (!walking) return;
+    const t = setTimeout(() => setProgress({ game, step: step + 1 }), STEP_MS);
+    return () => clearTimeout(t);
+  }, [walking, game, step]);
+  return walking ? { playerId: walk.playerId, at: (walk.from + step) % BOARD_SIZE } : null;
+}
+
+/** Quân trên một ô ở cạnh dưới; đông người thì xếp chồng, ô góc chia 2 hàng. */
+function Tokens({
+  players,
+  currentId,
+  walkerId,
+  corner,
+}: {
+  players: PlayerState[];
+  currentId: string | undefined;
+  walkerId: string | undefined;
+  corner: boolean;
+}) {
+  const split = corner && players.length > 3 ? Math.ceil(players.length / 2) : players.length;
+  const rows = [players.slice(0, split), players.slice(split)].filter((r) => r.length > 0);
+  return (
+    <span className="tokens">
+      {rows.map((row, k) => (
+        <span className="tokens-row" key={k}>
+          {row.map((p) => (
+            <span
+              key={p.id}
+              className={[
+                'token-slot',
+                p.id === currentId ? 'is-current' : '',
+                p.id === walkerId ? 'is-walking' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <TokenIcon
+                icon={p.icon}
+                color={p.color}
+                size="var(--tk)"
+                blink={p.id === currentId}
+                title={p.name}
+              />
+            </span>
+          ))}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function Board({ game, focus, onTileClick, children }: BoardProps) {
+  const walk = useWalk(game);
+  const currentId = game.players[game.current]?.id;
+  const positionOf = (p: PlayerState) => (walk?.playerId === p.id ? walk.at : p.position);
+  return (
+    <div className="board" role="group" aria-label="Bàn cờ">
+      {BOARD.map((tile) => {
+        const { row, col } = gridPosition(tile.index);
+        const st = game.tiles[tile.index];
+        const owner = playerById(game, st?.owner);
+        const ownerColor = owner ? colorOf(owner.color) : null;
+        const here = game.players.filter(
+          (p) => p.status === 'active' && positionOf(p) === tile.index,
+        );
+        const corner = tile.index % 10 === 0;
+        const hotel = tile.kind === 'property' && st?.level === HOTEL_LEVEL;
+        const name = SHORT_NAMES[tile.index]!;
+        // Từ dài (Landmark) thu nhỏ chữ một chút để không bị ngắt giữa từ.
+        const tight = name.split(' ').some((w) => w.length >= 8);
+        const classes = [
+          'tile',
+          `tile-${tile.kind}`,
+          corner ? 'tile-corner' : '',
+          hotel ? 'tile-hotel' : '',
+          st?.mortgaged ? 'tile-mortgaged' : '',
+          focus === tile.index ? 'tile-focus' : '',
+          `side-${cornerSide(tile)}`,
+        ]
+          .filter(Boolean)
+          .join(' ');
+        const style: Record<string, string | number> = { gridRow: row + 1, gridColumn: col + 1 };
+        if (ownerColor) {
+          style['--owner'] = ownerColor.main;
+          style['--owner-soft'] = ownerColor.soft;
+        }
+        const label = [
+          tile.name,
+          owner ? `chủ ${owner.name}` : null,
+          st?.mortgaged ? 'đang cắm' : null,
+          here.length > 0 ? `có ${here.map((p) => p.name).join(', ')}` : null,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        return (
+          <button
+            type="button"
+            key={tile.index}
+            className={classes}
+            style={style}
+            onClick={onTileClick ? () => onTileClick(tile.index) : undefined}
+            aria-label={label}
+          >
+            {tile.kind === 'property' && (
+              <LevelStrip level={st?.level ?? 0} color={ownerColor?.main ?? null} />
+            )}
+            {(tile.kind === 'station' || tile.kind === 'utility') && (
+              <span
+                className="strip strip-solid"
+                aria-hidden="true"
+                style={{ background: ownerColor?.main ?? 'transparent' }}
+              />
+            )}
+            <span className={tight ? 'tile-name tile-name-tight' : 'tile-name'}>{name}</span>
+            {hotel && <span className="sparkle" aria-hidden="true" />}
+            {(here.length > 0 || !corner) && (
+              <Tokens
+                players={here}
+                currentId={currentId}
+                walkerId={walk?.playerId}
+                corner={corner}
+              />
+            )}
+          </button>
+        );
+      })}
+      <div className="board-center">{children}</div>
+    </div>
+  );
+}

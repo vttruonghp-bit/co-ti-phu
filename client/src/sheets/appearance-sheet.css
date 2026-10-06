@@ -1,0 +1,53 @@
+.appearance-now {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1.5px solid;
+  border-radius: 12px;
+}
+
+.appearance-now-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.appearance-now-text b {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.appearance-now-text span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Hai nút cùng một dòng cả ở màn 360px */
+.appearance-footer {
+  gap: 8px;
+}
+
+.appearance-footer > .btn {
+  padding: 10px 9px;
+  font-size: clamp(14px, 4vw, 15px);
+}
+
+.appearance-footer > .btn-outline {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* "Ném mẹ [kí hiệu cũ] con này đi": kí hiệu nằm giữa chữ; máy quá hẹp thì xuống dòng */
+.appearance-throw {
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+
+.appearance-throw .token-icon {
+  box-shadow: 0 0 0 1.5px #fff;
+}
