@@ -1,0 +1,29 @@
+import { createContext, useContext } from 'react';
+import type { Seat } from '@cotiphu/shared';
+
+/**
+ * Cách chơi của màn ván: chung một máy (người cầm máy là người ván đang chờ), hoặc online
+ * (mỗi người một máy, `meId` là người cầm máy này).
+ */
+export type PlayMode =
+  | { kind: 'hotseat' }
+  | {
+      kind: 'online';
+      meId: string;
+      /** Ghế trong phòng, để biết ai đang mất kết nối. */
+      seats: readonly Seat[];
+      /** Máy này đang nối với máy chủ. */
+      connected: boolean;
+    };
+
+export const HOT_SEAT: PlayMode = { kind: 'hotseat' };
+
+export const PlayModeContext = createContext<PlayMode>(HOT_SEAT);
+
+export const usePlayMode = (): PlayMode => useContext(PlayModeContext);
+
+/** Người cầm máy này khi chơi online; null khi chơi chung một máy. */
+export function useMeId(): string | null {
+  const mode = usePlayMode();
+  return mode.kind === 'online' ? mode.meId : null;
+}
