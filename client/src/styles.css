@@ -1,0 +1,75 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1f2933;
+  background: #f4f1ea;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+.status {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  grid-template-rows: repeat(11, 1fr);
+  gap: 2px;
+  width: min(100%, 880px);
+  aspect-ratio: 1;
+  background: #2f3e46;
+  border: 2px solid #2f3e46;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px;
+  background: #fffdf7;
+  font-size: clamp(7px, 1.2vw, 12px);
+  overflow: hidden;
+}
+
+.tile-name {
+  font-weight: 600;
+}
+
+.tile-station {
+  background: #e9eef2;
+}
+
+.tile-utility {
+  background: #fff4d6;
+}
+
+.tile-chance,
+.tile-community {
+  background: #e6f4ea;
+}
+
+.tile-tax {
+  background: #fde8e8;
+}
+
+.board-center {
+  grid-row: 2 / 11;
+  grid-column: 2 / 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #cfe3d4;
+  font-size: clamp(24px, 6vw, 56px);
+  font-weight: 700;
+  color: #2f3e46;
+}
