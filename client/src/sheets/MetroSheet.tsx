@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { METRO_FEE_PERCENT, METRO_INDEX, type GameState } from '@cotiphu/shared';
 import { Sheet, SheetGlyph } from '../components/Sheet';
 import { TileGrid, arrivalAt, tileNumber } from '../components/TileGrid';
@@ -9,8 +9,11 @@ import './move-sheets.css';
 /** Phí Metro: một nửa tiền mặt hiện có, làm tròn xuống (luật mục 5). */
 const metroFee = (cash: number): number => Math.floor((cash * METRO_FEE_PERCENT) / 100);
 
+/** `extra`: nút Đầu hàng / Đen vl của màn chính, vì màn này che chúng. */
+type MoveSheetProps = SheetProps & { extra?: ReactNode };
+
 /** Màn Metro ở ô 10 (hình 2, trên trái): ở lại, hoặc trả nửa tiền mặt để đi tới ô bất kỳ. */
-export function MetroSheet(props: SheetProps) {
+export function MetroSheet(props: MoveSheetProps) {
   const pd = props.game.pending;
   if (pd.type !== 'metro') return null;
   // Mỗi lần tới Metro là một lựa chọn mới: bỏ ô đã chọn của lần trước.
@@ -19,7 +22,7 @@ export function MetroSheet(props: SheetProps) {
   );
 }
 
-function MetroChooser({ game, dispatch, id }: SheetProps & { id: string }) {
+function MetroChooser({ game, dispatch, id, extra }: MoveSheetProps & { id: string }) {
   const p = playerById(game, id)!;
   const [dest, setDest] = useState<number | null>(null);
   const fee = metroFee(p.cash);
@@ -85,6 +88,7 @@ function MetroChooser({ game, dispatch, id }: SheetProps & { id: string }) {
       <p className="move-note muted">
         Ô 10 có quân {p.name} đang đứng. Chỉ chuyển quân và trừ tiền khi bấm “Đi Metro”.
       </p>
+      {extra}
     </Sheet>
   );
 }

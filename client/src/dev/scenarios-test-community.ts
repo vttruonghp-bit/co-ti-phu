@@ -46,6 +46,9 @@ export const TEST_COMMUNITY_SCENARIOS: Record<string, () => GameState> = {
   'test-community-birthday': () => draw(sample(), 'community-birthday'),
   // Mừng sinh nhật, An chỉ có 5Đ nhưng có Tháp Rùa 3 nhà, Ga Vinh: An Xử lý nợ ngoài lượt.
   'test-community-birthday-debt': () => draw(cash(sample(), { 2: 5 }), 'community-birthday'),
+  // An 5Đ và Huy 5Đ cùng thiếu: hai Xử lý nợ ngoài lượt nối nhau theo vòng ghế (An trước, Huy sau).
+  'test-community-birthday-two-debts': () =>
+    draw(cash(sample(), { 2: 5, 4: 5 }), 'community-birthday'),
   // 02 Chuyển nhầm tài khoản: trả 100Đ (480 → 380).
   'test-community-wrong-transfer': () => draw(sample(), 'community-wrong-transfer'),
   // Chuyển nhầm tài khoản khi Linh chỉ có 60Đ: Linh Xử lý nợ trong lượt mình.
@@ -102,6 +105,8 @@ export const TEST_COMMUNITY_SCENARIOS: Record<string, () => GameState> = {
   // Minh giữ Kẻ khóc người cười nhưng chỉ có 10Đ: Minh Xử lý nợ 40Đ ngoài lượt.
   'test-community-mirror-debt': () =>
     draw(holdsMirror(cash(sample(), { 1: 10 }), 1), 'community-found-money'),
+  // Minh giữ Kẻ khóc người cười, Linh 60Đ Quá ngây thơ còn 10Đ, nợ Minh 40Đ: Linh Xử lý nợ.
+  'test-community-mirror-pay-debt': () => draw(holdsMirror(sample(), 1), 'community-naive', 14, 60),
   // Chính Linh giữ Kẻ khóc người cười rồi nhặt được 200Đ: không kích hoạt.
   'test-community-mirror-self': () => draw(holdsMirror(sample(), 0), 'community-found-money'),
   // Minh giữ Kẻ khóc người cười, Linh Về điểm xuất phát: 200Đ qua ô 00 không tính, không kích hoạt.
@@ -120,6 +125,10 @@ export const TEST_COMMUNITY_SCENARIOS: Record<string, () => GameState> = {
   'test-community-highway-tax': () => draw(sample(), 'community-highway'),
   // Cao tốc chọn Bến Thành, gieo 1 → qua ô 00 tới Phố Cổ (Minh): Trả tiền 2Đ, không nhận 200Đ.
   'test-community-highway-nogo': () => draw(sample(), 'community-highway'),
+  // Cao tốc chọn Cầu Rồng (của Linh, đang cắm), gieo 5 → đứng tại: được Chuộc + xây 1 nhà.
+  'test-community-highway-own': () => draw(sample(), 'community-highway'),
+  // Cao tốc chọn Sơn Đoòng (vô chủ), gieo 4 → đứng tại: Mua 180Đ.
+  'test-community-highway-buy': () => draw(sample(), 'community-highway'),
   // Cao tốc chọn Cung Đình, gieo 1 → Khí Vận 33, rút tiếp Nhặt được của rơi.
   'test-community-highway-chain': () =>
     top(draw(sample(), 'community-found-money'), 'community-highway'),

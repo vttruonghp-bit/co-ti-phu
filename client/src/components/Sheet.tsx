@@ -16,10 +16,12 @@ interface SheetProps {
   children: ReactNode;
   /** Nhãn cho trình đọc màn hình. */
   label?: string;
+  /** Thay "Lượt X" ở đầu màn bằng người khác, ví dụ "Linh rút" khi lượt đã sang người sau. */
+  who?: { playerId: string; text: string };
 }
 
 /** Màn phụ phủ toàn bộ khung điện thoại, giống các hình mẫu trong bản 3.2. */
-export function Sheet({ game, icon, title, subtitle, footer, children, label }: SheetProps) {
+export function Sheet({ game, icon, title, subtitle, footer, children, label, who }: SheetProps) {
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -27,7 +29,9 @@ export function Sheet({ game, icon, title, subtitle, footer, children, label }: 
       document.body.style.overflow = prev;
     };
   }, []);
-  const cur = game ? game.players[game.current] : null;
+  const shown = who && game?.players.find((p) => p.id === who.playerId);
+  const cur = shown ?? (game ? game.players[game.current] : null);
+  const curText = shown ? who!.text : `Lượt ${cur?.name}`;
   return (
     <div className="sheet-backdrop">
       <section className="sheet" role="dialog" aria-modal="true" aria-label={label ?? title}>
@@ -35,7 +39,7 @@ export function Sheet({ game, icon, title, subtitle, footer, children, label }: 
           <h1 className="app-title">CỜ TỶ PHÚ</h1>
           {cur && game?.pending.type !== 'ended' && (
             <span className="app-turn" style={{ color: colorOf(cur.color).main }}>
-              Lượt {cur.name} · {money(cur.cash)}
+              {curText} · {money(cur.cash)}
             </span>
           )}
         </header>

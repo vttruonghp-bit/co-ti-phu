@@ -42,15 +42,18 @@ function highwayMarks(tile: number): Map<number, ReactNode> {
   );
 }
 
+/** `extra`: nút Đầu hàng / Đen vl của màn chính, vì màn này che chúng. */
+type ChooseTileSheetProps = SheetProps & { extra?: ReactNode };
+
 /** Chọn ô cho thẻ Mở đường cao tốc (hình 3, trên trái) hoặc Canh bạc xây dựng. */
-export function ChooseTileSheet(props: SheetProps) {
+export function ChooseTileSheet(props: ChooseTileSheetProps) {
   const pd = props.game.pending;
   if (pd.type !== 'chooseTile') return null;
   const key = `${pd.playerId}-${pd.purpose}-${props.game.turnNumber}-${pd.options.join('.')}`;
   return <TileChooser key={key} {...props} pd={pd} />;
 }
 
-function TileChooser({ game, dispatch, pd }: SheetProps & { pd: ChoosePending }) {
+function TileChooser({ game, dispatch, pd, extra }: ChooseTileSheetProps & { pd: ChoosePending }) {
   const p = playerById(game, pd.playerId)!;
   const [tile, setTile] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -154,6 +157,7 @@ function TileChooser({ game, dispatch, pd }: SheetProps & { pd: ChoosePending })
           ? 'Kể cả đất đang cắm, của ai cũng được. Chỉ đi khi bấm xác nhận.'
           : `${GAMBLE_CARD.title} đếm cả đất đang cắm, trung bình chưa làm tròn. Cấp nhà chỉ đổi khi bấm xác nhận.`}
       </p>
+      {extra}
     </Sheet>
   );
 }

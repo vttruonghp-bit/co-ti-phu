@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BOARD, type GameState, type ManageOp, type Pending } from '@cotiphu/shared';
+import {
+  BOARD,
+  BOARD_SIZE,
+  CHANCE_CARDS,
+  JAIL_INDEX,
+  type GameState,
+  type ManageOp,
+  type Pending,
+} from '@cotiphu/shared';
 import { Sheet } from '../components/Sheet';
+import { arrivalAt, tileNumber } from '../components/TileGrid';
 import { TokenIcon } from '../components/TokenIcon';
 import {
   buildDraft,
@@ -12,7 +21,16 @@ import {
   type Draft,
   type DraftMove,
 } from '../game/draft';
-import { SHORT_NAMES, levelText, money, playerById, rentText, signed } from '../game/format';
+import {
+  SHORT_NAMES,
+  levelText,
+  money,
+  playerById,
+  rentText,
+  signed,
+  tileName,
+} from '../game/format';
+import { colorOf } from '../theme';
 import type { SheetProps } from './types';
 import './manage-sheet.css';
 
@@ -55,6 +73,13 @@ const MOVE_HELP: Record<DraftMove['kind'], string> = {
 
 /** Tiền sau dự thảo có thể âm: dùng dấu trừ thật như phần còn lại của giao diện. */
 const cashText = (n: number): string => (n < 0 ? signed(n) : money(n));
+
+/** Thẻ Người thủ đô: quyền miễn thuế mất khi không còn sở hữu ô này (Phố Cổ). */
+const CAPITAL = (() => {
+  const c = CHANCE_CARDS.find((x) => x.effect.type === 'capitalCitizen');
+  if (c?.effect.type !== 'capitalCitizen') throw new Error('Thiếu thẻ Người thủ đô');
+  return { title: c.title, tile: c.effect.requiredTile };
+})();
 
 /** Tên người nhận khoản nợ ("Ngân hàng" hoặc tên người chơi). */
 const creditorText = (game: GameState, pd: PayPending): string =>
@@ -104,10 +129,19 @@ export function ManageSheet({
   };
 
   const offTurn = game.players[game.current]?.id !== playerId;
+  // Bán Phố Cổ trong dự thảo thì quyền Người thủ đô đang giữ hết hiệu lực.
+  const losesCapital =
+    p.heldCards.some((h) => h.kind === 'taxWaiver') &&
+    draft.assets.some((a) => a.tile === CAPITAL.tile && a.start.owned && !a.now.owned);
+  const warning = losesCapital
+    ? `Bán ${assetName(CAPITAL.tile)} sẽ mất quyền ${CAPITAL.title} đang giữ.`
+    : null;
   const title = mode === 'debt' ? 'Xử lý nợ' : mode === 'manage' ? 'Ụp / Mở' : 'Tài sản';
   const subtitle =
     mode === 'debt'
-      ? `${p.name} thiếu tiền${offTurn ? ' (ngoài lượt)' : ''} · bấm − để thanh lý`
+      ? offTurn
+        ? `${p.name} thiếu tiền ngoài lượt`
+        : `${p.name} thiếu tiền · bấm − để thanh lý`
       : mode === 'manage'
         ? `${p.name} · bấm − / + để tạo dự thảo`
         : `${p.name} · chỉ xem, Ụp/Mở ở đầu lượt`;
@@ -124,6 +158,7 @@ export function ManageSheet({
           mode={mode}
           draft={draft}
           debt={debt}
+          warning={warning}
           onClose={onClose}
           onShowBoard={onShowBoard}
           onConfirm={confirm}
@@ -132,6 +167,16 @@ export function ManageSheet({
       }
     >
       <div className="manage-body">
+        {/* Nợ ngoài lượt: người giữ máy (người giữ lượt) phải đưa máy cho người nợ. */}
+        {debt && offTurn && (
+          <p
+            className="handoff"
+            style={{ background: colorOf(p.color).soft, color: colorOf(p.color).main }}
+          >
+            Chuyển máy cho <b>{p.name}</b>: {p.name} thiếu tiền trả {money(debt.total)} cho{' '}
+            {creditorText(game, debt)}
+          </p>
+        )}
         {debt ? (
           <DebtBox game={game} debt={debt} draft={draft} />
         ) : (
@@ -227,7 +272,45 @@ function DebtBox({ game, debt, draft }: { game: GameState; debt: PayPending; dra
           )}
         </div>
       </dl>
+      {debt.reason === 'jailBail' && (
+        <JailBailNote game={game} playerId={debt.playerId} cash={draft.cashAfter - debt.total} />
+      )}
     </div>
+  );
+}
+
+/** Bảo lãnh sau lần thử đôi cuối: xúc xắc vừa gieo và ô sẽ tới khi trả xong (luật mục 6). */
+function JailBailNote({
+  game,
+  playerId,
+  cash,
+}: {
+  game: GameState;
+  playerId: string;
+  cash: number;
+}) {
+  const p = playerById(game, playerId)!;
+  const move = game.queue.find((x) => x.type === 'moveAfterJail' && x.playerId === playerId);
+  if (move?.type !== 'moveAfterJail') return null;
+  const roll = [...game.events]
+    .reverse()
+    .find((e) => e.type === 'roll' && e.jail && e.playerId === playerId);
+  const to = (JAIL_INDEX + move.steps) % BOARD_SIZE;
+  const arrival = arrivalAt(game, p, to, Math.max(0, cash));
+  return (
+    <p className="manage-jail">
+      <span>
+        {roll?.type === 'roll'
+          ? `Lần thử cuối không ra đôi (${roll.dice[0]} + ${roll.dice[1]}). `
+          : 'Lần thử cuối không ra đôi. '}
+        Trả xong sẽ đi {move.steps} ô tới{' '}
+        <b>
+          {tileNumber(to)} {tileName(to)}
+        </b>
+        .
+      </span>
+      <span className={arrival.tone ? 'down' : undefined}>{arrival.text}</span>
+    </p>
   );
 }
 
@@ -367,6 +450,8 @@ interface FooterProps {
   mode: ManageMode;
   draft: Draft;
   debt: PayPending | null;
+  /** Hệ quả cần biết trước khi xác nhận (mất quyền Người thủ đô). */
+  warning: string | null;
   onClose: () => void;
   onShowBoard?: () => void;
   onConfirm: () => void;
@@ -394,7 +479,16 @@ function FooterCash({ draft, debt }: { draft: Draft; debt: PayPending | null }) 
   );
 }
 
-function Footer({ mode, draft, debt, onClose, onShowBoard, onConfirm, onSettle }: FooterProps) {
+function Footer({
+  mode,
+  draft,
+  debt,
+  warning,
+  onClose,
+  onShowBoard,
+  onConfirm,
+  onSettle,
+}: FooterProps) {
   if (mode === 'view') {
     return (
       <button type="button" className="btn btn-outline manage-close-only" onClick={onClose}>
@@ -407,6 +501,7 @@ function Footer({ mode, draft, debt, onClose, onShowBoard, onConfirm, onSettle }
     return (
       <>
         <FooterCash draft={draft} debt={debt} />
+        {warning && <p className="manage-warn">{warning}</p>}
         <div className="btn-row">
           {onShowBoard && (
             <button type="button" className="btn btn-outline manage-peek" onClick={onShowBoard}>
@@ -430,6 +525,7 @@ function Footer({ mode, draft, debt, onClose, onShowBoard, onConfirm, onSettle }
   return (
     <>
       <FooterCash draft={draft} debt={null} />
+      {warning && <p className="manage-warn">{warning}</p>}
       <div className="btn-row">
         <button type="button" className="btn btn-outline" onClick={onClose}>
           Đóng

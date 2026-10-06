@@ -353,3 +353,15 @@
   border: 2px solid #7b5bd6;
   letter-spacing: 0.04em;
 }
+
+/* Dòng không đổi tiền (dùng thẻ miễn, đổi đất…): nhãn nhạt thay cho số tiền */
+.log-amount.is-note {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Trong màn Metro, tù, chọn ô: hẹp hơn màn chính nên bớt lề để chữ nằm trên 1 dòng */
+.sheet .danger-row .btn {
+  padding-inline: 6px;
+  font-size: 15px;
+}

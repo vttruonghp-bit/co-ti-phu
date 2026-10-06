@@ -81,10 +81,17 @@ export function CardSheet({
     </div>
   );
 
+  // Lượt có thể đã sang người sau, nhưng máy vẫn đang ở tay người rút.
+  const who = {
+    playerId: drawer.id,
+    text: `${drawer.name} ${event.type === 'highway' ? 'gieo' : 'rút'}`,
+  };
+
   if (event.type === 'highway') {
     return (
       <Sheet
         game={game}
+        who={who}
         icon={
           <SheetGlyph color="var(--red)">
             <RoadGlyph />
@@ -119,6 +126,7 @@ export function CardSheet({
   return (
     <Sheet
       game={game}
+      who={who}
       icon={
         <SheetGlyph color={c.deck === 'chance' ? 'var(--orange)' : 'var(--red)'}>
           {c.deck === 'chance' ? <StarGlyph /> : <GiftGlyph />}
@@ -356,7 +364,11 @@ function nextText(game: GameState, draws: Draw[], k: number): string {
         : `${name} quyết định có chuộc ${tileName(pd.tile)} không.`;
     case 'pay': {
       const p = playerById(game, pd.playerId)!;
-      if (p.cash < pd.total) return `${p.name} thiếu tiền trả ${money(pd.total)}: vào Xử lý nợ.`;
+      if (p.cash < pd.total) {
+        return p.id !== game.players[game.current]!.id
+          ? `Chuyển máy cho ${p.name}: ${p.name} thiếu tiền trả ${money(pd.total)}, vào Xử lý nợ.`
+          : `${p.name} thiếu tiền trả ${money(pd.total)}: vào Xử lý nợ.`;
+      }
       if (pd.reason === 'tax') return `${p.name} bấm “Là nó” để nộp ${money(pd.total)}.`;
       const to = pd.creditors.map((c) => playerById(game, c.playerId)?.name ?? 'Ngân hàng');
       return `${p.name} bấm “Trả tiền” ${money(pd.total)} cho ${to.join(', ')}.`;
@@ -670,6 +682,12 @@ function DiceDetail({ game, card, drawer, result, dice }: DetailProps & { dice: 
         {numbered(tile)} {owner ? `của ${owner.name}` : ''} đang hoạt động: thay tiền thuê bằng{' '}
         {mult} × tổng 2 viên mới.
       </p>
+      {drawer.heldCards.some((h) => h.kind === 'rentWaiver') && (
+        <p className="draw-detail-note">
+          Thẻ Miễn thuế nhà đất của {drawer.name} không dùng cho khoản này (khoản của thẻ, không
+          phải tiền thuê), vẫn giữ lại.
+        </p>
+      )}
     </section>
   );
 }
@@ -706,8 +724,25 @@ function FireDetail({
     tile.kind !== 'property'
       ? `${tile.name} không phải đất màu nên không có tác dụng.`
       : `${tile.name} không có nhà nên không có tác dụng.`;
+  // Kết quả lên trước để thấy ngay không phải cuộn; cách tính ở dưới.
   return (
     <section className="draw-detail">
+      <div className={`draw-burn ${detail.hit ? 'is-hit' : 'is-miss'}`}>
+        <span className="eyebrow">{detail.hit ? 'Mảnh đất bị cháy' : 'Không cháy'}</span>
+        <div className="draw-burn-main">
+          <b>{tile.name}</b>
+          {detail.hit && st && (
+            <b className="draw-burn-level">
+              {levelText(st.level + 1)} <span aria-hidden="true">→</span> {levelText(st.level)}
+            </b>
+          )}
+        </div>
+        <p>
+          {detail.hit
+            ? `${owner ? `Của ${owner.name} · ` : ''}hạ một cấp, không hoàn tiền xây.`
+            : miss}
+        </p>
+      </div>
       <div className="draw-head-row">
         <h4 className="eyebrow">
           {detail.rolls.length} / {detail.rolls.length} người đã gieo
@@ -735,22 +770,6 @@ function FireDetail({
         <p className="draw-sum-note">
           Từ ô {numbered(result.from)} của {drawer.name} đếm {detail.total} ô{' '}
           <span aria-hidden="true">→</span> <b className="nowrap">{numbered(detail.target)}</b>
-        </p>
-      </div>
-      <div className={`draw-burn ${detail.hit ? 'is-hit' : 'is-miss'}`}>
-        <span className="eyebrow">{detail.hit ? 'Mảnh đất bị cháy' : 'Không cháy'}</span>
-        <div className="draw-burn-main">
-          <b>{tile.name}</b>
-          {detail.hit && st && (
-            <b className="draw-burn-level">
-              {levelText(st.level + 1)} <span aria-hidden="true">→</span> {levelText(st.level)}
-            </b>
-          )}
-        </div>
-        <p>
-          {detail.hit
-            ? `${owner ? `Của ${owner.name} · ` : ''}hạ một cấp, không hoàn tiền xây.`
-            : miss}
         </p>
       </div>
       <p className="draw-detail-note">Không ai di chuyển.</p>
@@ -835,42 +854,9 @@ function SwapDetail({
   const even = detail.die2 % 2 === 0;
   const penalty = card.effect.type === 'swapProperty' ? card.effect.penalty : 0;
   const color = colorOf(drawer.color).main;
+  // Kết quả lên trước để thấy ngay không phải cuộn; xúc xắc và vòng ghế ở dưới.
   return (
     <section className="draw-detail">
-      <div className="draw-seats box box-purple">
-        <span className="eyebrow">Gán số người còn lại</span>
-        <ol>
-          {opponents.map((p, i) => (
-            <li key={p.id} className={p.id === opp.id ? 'is-picked' : undefined}>
-              <span className="draw-seat-num">{i + 1}</span>
-              <TokenIcon icon={p.icon} color={p.color} size={24} />
-              <span className="draw-seat-name">{p.name}</span>
-            </li>
-          ))}
-        </ol>
-        {opponents.length < 6 && (
-          <p className="draw-sum-note">
-            Ra {opponents.length + 1 === 6 ? '6' : `${opponents.length + 1}–6`} thì gieo lại viên 1.
-          </p>
-        )}
-      </div>
-      <div className="draw-pair">
-        <div className="draw-dice">
-          <Dice values={[d1]} color={color} size={36} rolling />
-          <div className="draw-dice-text">
-            <b>Viên 1 = {d1}</b>
-            <span>Đối thủ: {opp.name}</span>
-            {rerolls.length > 0 && <span className="muted">Gieo lại: {rerolls.join(', ')}</span>}
-          </div>
-        </div>
-        <div className="draw-dice">
-          <Dice values={[detail.die2]} color={color} size={36} rolling />
-          <div className="draw-dice-text">
-            <b>Viên 2 = {detail.die2}</b>
-            <span>{even ? 'Chẵn: đổi đất màu rẻ nhất' : 'Lẻ: lấy ga / nhà máy'}</span>
-          </div>
-        </div>
-      </div>
       {detail.mine !== null && detail.theirs !== null ? (
         <>
           <h4 className="eyebrow">Tài sản đã đổi</h4>
@@ -896,6 +882,45 @@ function SwapDetail({
           </span>
         </div>
       )}
+      <div className="draw-pair">
+        <div className="draw-dice">
+          <Dice values={[d1]} color={color} size={36} rolling />
+          <div className="draw-dice-text">
+            {rerolls.length > 0 && (
+              <span className="muted">
+                {rerolls.length > 1 ? 'Các lần trước' : 'Lần đầu'} ra {rerolls.join(', ')} (lớn hơn{' '}
+                {opponents.length}) nên gieo lại
+              </span>
+            )}
+            <b>Viên 1 = {d1}</b>
+            <span>Đối thủ: {opp.name}</span>
+          </div>
+        </div>
+        <div className="draw-dice">
+          <Dice values={[detail.die2]} color={color} size={36} rolling />
+          <div className="draw-dice-text">
+            <b>Viên 2 = {detail.die2}</b>
+            <span>{even ? 'Chẵn: đổi đất màu rẻ nhất' : 'Lẻ: lấy ga / nhà máy'}</span>
+          </div>
+        </div>
+      </div>
+      <div className="draw-seats box box-purple">
+        <span className="eyebrow">Gán số người còn lại</span>
+        <ol>
+          {opponents.map((p, i) => (
+            <li key={p.id} className={p.id === opp.id ? 'is-picked' : undefined}>
+              <span className="draw-seat-num">{i + 1}</span>
+              <TokenIcon icon={p.icon} color={p.color} size={24} />
+              <span className="draw-seat-name">{p.name}</span>
+            </li>
+          ))}
+        </ol>
+        {opponents.length < 6 && (
+          <p className="draw-sum-note">
+            Ra {opponents.length + 1 === 6 ? '6' : `${opponents.length + 1}–6`} thì gieo lại viên 1.
+          </p>
+        )}
+      </div>
     </section>
   );
 }

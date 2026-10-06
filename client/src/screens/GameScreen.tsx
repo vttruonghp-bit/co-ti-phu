@@ -3,6 +3,7 @@ import {
   BOARD,
   HOTEL_LEVEL,
   LOG_VISIBLE_ENTRIES,
+  UTILITY_MULTIPLIERS,
   redeemCost,
   type Action,
   type GameState,
@@ -103,10 +104,21 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   );
   const pendingCard = cardEvents[cardsSeen];
   const lastRoll = [...game.events].reverse().find((e) => e.type === 'roll');
-  const dice = lastRoll?.type === 'roll' ? lastRoll.dice : (game.lastDice ?? null);
+  // Khoản đang chờ trả tính theo xúc xắc gieo mới (thẻ 10 × xúc xắc, nhà máy khi đến bằng Metro…):
+  // ô giữa hiện chính xúc xắc đó thay cho lần đổ để đi.
+  const formula = payFormula(game, me);
+  const dice = formula
+    ? formula.dice
+    : lastRoll?.type === 'roll'
+      ? lastRoll.dice
+      : (game.lastDice ?? null);
   // Xúc xắc mang màu người gieo: lần đổ trong thao tác này, không thì người giữ lượt
   // (lastDice bị xóa khi sang lượt mới nên luôn là của người giữ lượt).
-  const roller = lastRoll?.type === 'roll' ? playerById(game, lastRoll.playerId) : cur;
+  const roller = formula
+    ? me
+    : lastRoll?.type === 'roll'
+      ? playerById(game, lastRoll.playerId)
+      : cur;
   const rollerColor = colorOf((roller ?? cur).color).main;
 
   const sheetProps = {
@@ -115,6 +127,18 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
     dispatch: send,
     onClose: () => setManual(null),
   };
+
+  // Đầu hàng / Đen vl: cũng đặt trong các màn Metro, tù, chọn ô vì các màn này che màn chính.
+  const danger = (
+    <div className="btn-row danger-row">
+      <button type="button" className="btn btn-surrender" onClick={() => setManual('surrender')}>
+        ⚠ ĐẦU HÀNG
+      </button>
+      <button type="button" className="btn btn-denvl" onClick={() => setManual('appearance')}>
+        ĐEN VL
+      </button>
+    </div>
+  );
 
   // Màn phụ: thẻ vừa rút trước, rồi tới việc ván đang chờ, rồi các màn người chơi tự mở.
   const debtor = debtorOf(game, previous);
@@ -137,20 +161,22 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   } else if (manual === 'manage' || (debtor && manual !== 'board')) {
     // Xử lý nợ là của người đang nợ (có thể không phải người giữ lượt), không đóng được.
     const mode: ManageMode = debtor ? 'debt' : canManage(game, me) ? 'manage' : 'view';
+    // Mỗi người nợ một màn mới (dự thảo và chỗ cuộn bắt đầu lại).
     sheet = (
       <ManageSheet
         {...sheetProps}
+        key={debtor ?? me.id}
         mode={mode}
         playerId={debtor ?? me.id}
         onShowBoard={() => setManual('board')}
       />
     );
   } else if (pd.type === 'metro') {
-    sheet = <MetroSheet {...sheetProps} />;
+    sheet = <MetroSheet {...sheetProps} extra={danger} />;
   } else if (pd.type === 'jail' || pd.type === 'jailRelease') {
-    sheet = <JailSheet {...sheetProps} onOpenManage={() => setManual('manage')} />;
+    sheet = <JailSheet {...sheetProps} onOpenManage={() => setManual('manage')} extra={danger} />;
   } else if (pd.type === 'chooseTile') {
-    sheet = <ChooseTileSheet {...sheetProps} />;
+    sheet = <ChooseTileSheet {...sheetProps} extra={danger} />;
   }
 
   const main = ((): MainAction | null => {
@@ -252,6 +278,7 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
             dice={dice}
             diceColor={rollerColor}
             rollKey={actions}
+            formula={formula}
           />
         </Board>
 
@@ -272,18 +299,7 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
 
         <LogPanel game={game} />
 
-        <div className="btn-row danger-row">
-          <button
-            type="button"
-            className="btn btn-surrender"
-            onClick={() => setManual('surrender')}
-          >
-            ⚠ ĐẦU HÀNG
-          </button>
-          <button type="button" className="btn btn-denvl" onClick={() => setManual('appearance')}>
-            ĐEN VL
-          </button>
-        </div>
+        {danger}
         <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
       </div>
 
@@ -365,6 +381,60 @@ interface CenterPanelProps {
   dice: readonly number[] | null;
   diceColor: string;
   rollKey: number;
+  formula: PayFormula | null;
+}
+
+interface PayFormula {
+  /** Nhãn thay cho "Tiền thuê". */
+  label: string;
+  /** "10 × (3 + 4) = 70Đ". */
+  text: string;
+  dice: [number, number];
+}
+
+/** Dòng nhật ký có xúc xắc: khoản 10 × xúc xắc của thẻ, nhà máy gieo mới, đổ để đi, thử đôi. */
+const CARD_DICE = /^Gieo (\d) \+ (\d), trả (\d+) × \d+$/;
+const UTILITY_DICE = /^Gieo (\d) \+ (\d) để tính tiền /;
+const MOVE_DICE = /^(?:Đổ|Thử đổ đôi trong tù:) (\d) \+ (\d)/;
+
+/**
+ * Khoản đang chờ trả ở ô đang đứng mà tính theo xúc xắc: 10 × xúc xắc của thẻ Đất/Ga gần nhất,
+ * hoặc tiền nhà máy (đến bằng Metro, thẻ… thì bộ luật gieo 2 viên mới). Xúc xắc lấy ở dòng nhật ký
+ * có xúc xắc gần nhất của người đó trong lượt này; không khớp số tiền thì thôi.
+ */
+function payFormula(game: GameState, me: PlayerState): PayFormula | null {
+  const pd = game.pending;
+  if (pd.type !== 'pay' || pd.playerId !== me.id) return null;
+  const card = pd.reason === 'card';
+  const t = BOARD[me.position]!;
+  if (!card && !(pd.reason === 'rent' && t.kind === 'utility')) return null;
+  for (let i = game.log.length - 1; i >= 0; i--) {
+    const e = game.log[i]!;
+    if (e.turn !== game.turnNumber) return null;
+    if (e.playerId !== me.id) continue;
+    const m = CARD_DICE.exec(e.text) ?? UTILITY_DICE.exec(e.text) ?? MOVE_DICE.exec(e.text);
+    if (!m) continue;
+    const dice: [number, number] = [Number(m[1]), Number(m[2])];
+    const sum = dice[0] + dice[1];
+    let mult: number;
+    if (card) {
+      if (m[3] === undefined) return null;
+      mult = Number(m[3]);
+    } else {
+      const owner = game.tiles[me.position]?.owner;
+      const active = game.tiles.filter(
+        (x, k) => x !== null && x.owner === owner && !x.mortgaged && BOARD[k]!.kind === 'utility',
+      ).length;
+      mult = UTILITY_MULTIPLIERS[active] ?? 0;
+    }
+    if (mult * sum !== pd.total) return null;
+    return {
+      label: card ? 'Theo thẻ' : 'Tiền thuê',
+      text: `${mult} × (${dice[0]} + ${dice[1]}) = ${money(pd.total)}`,
+      dice,
+    };
+  }
+  return null;
 }
 
 function tileDescription(game: GameState, i: number): string {
@@ -425,8 +495,19 @@ function levelLabel(level: number): string {
   return level > 0 && level < HOTEL_LEVEL ? `${level} / 4 nhà` : levelText(level);
 }
 
-function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: CenterPanelProps) {
+function CenterPanel({
+  game,
+  me,
+  tile,
+  viewing,
+  dice,
+  diceColor,
+  rollKey,
+  formula,
+}: CenterPanelProps) {
   const t = BOARD[tile]!;
+  // Cách tính khoản đang chờ trả chỉ hiện ở ô đang đứng.
+  const pay = viewing ? null : formula;
   const st = game.tiles[tile];
   const owner = playerById(game, st?.owner);
   const after = viewing ? null : cashAfter(game, me);
@@ -485,8 +566,8 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
               </b>
             </div>
             <div className="right">
-              <span className="eyebrow">Tiền thuê</span>
-              <b>{rentText(game, tile)}</b>
+              <span className="eyebrow">{pay?.label ?? 'Tiền thuê'}</span>
+              <b>{pay?.text ?? rentText(game, tile)}</b>
             </div>
           </div>
         )}
@@ -509,9 +590,22 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
   );
 }
 
+/**
+ * Dòng nhật ký không đổi tiền nhưng người chơi cần thấy, kèm nhãn ở cột tiền: dùng hoặc mất thẻ
+ * miễn, Thằng Bờm đổi đất, xúc xắc gieo mới để tính khoản phải trả.
+ */
+const LOG_NOTES: readonly [RegExp, string][] = [
+  [/^Dùng (thẻ Miễn thuế nhà đất|quyền Người thủ đô)/, 'miễn'],
+  [/hết hiệu lực$/, 'mất thẻ'],
+  [/^Đổi .+ lấy /, '⇄'],
+  [/^Gieo \d \+ \d(, trả | để tính tiền )/, ''],
+];
+
+const noteOf = (text: string): string | undefined => LOG_NOTES.find(([re]) => re.test(text))?.[1];
+
 function LogPanel({ game }: { game: GameState }) {
   const rows = game.log
-    .filter((e) => e.amount !== undefined && e.amount !== 0)
+    .filter((e) => (e.amount !== undefined && e.amount !== 0) || noteOf(e.text) !== undefined)
     .slice(-LOG_VISIBLE_ENTRIES)
     .reverse();
   return (
@@ -530,9 +624,13 @@ function LogPanel({ game }: { game: GameState }) {
               {p && <TokenIcon icon={p.icon} color={p.color} size={18} />}
               <b style={c ? { color: c.main } : undefined}>{p?.name ?? 'Ngân hàng'}</b>
               <span className="log-text">{e.text}</span>
-              <span className={`log-amount ${e.amount! > 0 ? 'up' : 'down'}`}>
-                {signed(e.amount!)}
-              </span>
+              {e.amount ? (
+                <span className={`log-amount ${e.amount > 0 ? 'up' : 'down'}`}>
+                  {signed(e.amount)}
+                </span>
+              ) : (
+                <span className="log-amount is-note">{noteOf(e.text)}</span>
+              )}
             </li>
           );
         })}

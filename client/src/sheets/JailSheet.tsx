@@ -10,12 +10,15 @@ import './move-sheets.css';
 
 type Way = 'roll' | 'bail' | 'card';
 
+/** `extra`: nút Đầu hàng / Đen vl của màn chính, vì màn này che chúng. */
+type JailSheetProps = SheetProps & { onOpenManage: () => void; extra?: ReactNode };
+
 /**
  * Màn đang ở tù (hình 2, dưới trái). `jail`: thử đổ đôi, trả 50Đ hoặc dùng thẻ;
  * `jailRelease`: lần thử thứ 3 không ra đôi mà có thẻ, phải trả 50Đ hoặc dùng thẻ rồi đi.
  * `onOpenManage` mở Ụp/Mở ở đầu lượt.
  */
-export function JailSheet(props: SheetProps & { onOpenManage: () => void }) {
+export function JailSheet(props: JailSheetProps) {
   const { game } = props;
   const pd = game.pending;
   if (pd.type !== 'jail' && pd.type !== 'jailRelease') return null;
@@ -25,12 +28,7 @@ export function JailSheet(props: SheetProps & { onOpenManage: () => void }) {
   return <JailChooser key={key} {...props} id={p.id} />;
 }
 
-function JailChooser({
-  game,
-  dispatch,
-  onOpenManage,
-  id,
-}: SheetProps & { onOpenManage: () => void; id: string }) {
+function JailChooser({ game, dispatch, onOpenManage, extra, id }: JailSheetProps & { id: string }) {
   const pd = game.pending;
   const p = playerById(game, id)!;
   const release = pd.type === 'jailRelease' ? pd : null;
@@ -192,6 +190,7 @@ function JailChooser({
       ) : (
         <ThirdTryNote attempt={attempt} cards={cards} canBail={canBail} />
       )}
+      {extra}
     </Sheet>
   );
 }
