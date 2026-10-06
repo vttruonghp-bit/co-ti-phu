@@ -496,7 +496,9 @@ function PlayerFrames({ game, meId, offline }: PlayerFramesProps) {
           {game.players.map((p, i) => {
             if (SLOTS[i] !== slot) return null;
             const c = colorOf(p.color);
-            const props = game.tiles.filter((t, k) => t?.owner === p.id && BOARD[k]!.kind === 'property');
+            const props = game.tiles.filter(
+              (t, k) => t?.owner === p.id && BOARD[k]!.kind === 'property',
+            );
             const houses = props.reduce((n, t) => n + (t!.level < HOTEL_LEVEL ? t!.level : 0), 0);
             const hotels = props.filter((t) => t!.level >= HOTEL_LEVEL).length;
             return (
@@ -506,7 +508,10 @@ function PlayerFrames({ game, meId, offline }: PlayerFramesProps) {
                 style={{ ['--pc' as string]: c.main }}
               >
                 <span className="frame-avatar">
-                  <img src={`/assets/avatar-${String((p.icon % 10) + 1).padStart(2, '0')}.png`} alt="" />
+                  <img
+                    src={`/assets/avatar-${String((p.icon % 10) + 1).padStart(2, '0')}.png`}
+                    alt=""
+                  />
                   <span className="frame-token">
                     <TokenIcon icon={p.icon} color={p.color} size={16} />
                   </span>

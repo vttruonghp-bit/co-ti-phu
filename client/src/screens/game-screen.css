@@ -398,3 +398,347 @@
 .player-chip.is-me {
   border-width: 2px;
 }
+
+/* ===================== Màn ngang ===================== */
+.land {
+  --side: clamp(160px, 24%, 220px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh;
+  display: block;
+  overflow: hidden;
+  background: #0b1222 url('/assets/nen.jpg') center / cover;
+  container-type: size;
+}
+
+/* Màn dọc: xoay cả màn để chơi ngang */
+@media (orientation: portrait) {
+  .land {
+    width: 100dvh;
+    height: 100vw;
+    transform: rotate(90deg) translateY(-100%);
+    transform-origin: top left;
+  }
+}
+
+.land-main {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.land-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  container-type: size;
+}
+
+.iso {
+  --s: min(calc(100cqw / 1.42), calc(100cqh / 0.83));
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--s);
+  height: var(--s);
+  transform: translate(-50%, -50%) scaleY(0.58) rotate(45deg);
+}
+
+.iso .board {
+  width: 100%;
+  height: 100%;
+}
+
+.land .center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  width: min(300px, 46cqw);
+  height: auto;
+  gap: 0;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgb(255 214 120 / 70%);
+  border-radius: 12px;
+  background: rgb(14 22 42 / 88%);
+  color: #f2f5fb;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 50%);
+  overflow: hidden;
+}
+
+.center-head {
+  padding: 5px 8px;
+  text-align: center;
+  background:
+    linear-gradient(rgb(10 16 32 / 35%), rgb(10 16 32 / 75%)),
+    url('/assets/trung-tam.jpg') center / cover;
+}
+
+.center-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffd98a;
+}
+
+.land .center-tile-name {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.center-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 8px 6px;
+  font-size: 10.5px;
+}
+
+.land .center-tile-owner,
+.center-rent,
+.land .center-wait {
+  margin: 0;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.land .center-tile-owner[style] {
+  filter: brightness(1.8);
+}
+
+.land .center-wait {
+  color: #ffd98a;
+  font-weight: 700;
+}
+
+.rent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+  text-align: center;
+}
+
+.rent-table th {
+  font-weight: 600;
+  color: #b8c3da;
+}
+
+.rent-table td {
+  font-weight: 800;
+  border-top: 1px solid rgb(255 255 255 / 15%);
+}
+
+.rent-table td.is-now {
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.center-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.land .center-after b.down {
+  color: #ff9aa4;
+}
+
+.land .center-after b.up {
+  color: #8fe3c0;
+}
+
+.land .action-bar .btn {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Khung người chơi ở các góc */
+.frames {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.frames-tl {
+  top: 4px;
+  left: 4px;
+}
+
+.frames-tr {
+  top: 4px;
+  right: 4px;
+}
+
+.frames-br {
+  right: 4px;
+  bottom: 4px;
+}
+
+.frames-bl {
+  bottom: 4px;
+  left: 4px;
+}
+
+.frame {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 140px;
+  padding: 3px 6px 3px 3px;
+  border: 2px solid color-mix(in srgb, var(--pc) 70%, #000);
+  border-radius: 10px;
+  background: rgb(14 22 42 / 85%);
+  color: #fff;
+}
+
+.frame.is-turn {
+  border-color: #ffd34d;
+  box-shadow: 0 0 10px 2px rgb(255 211 77 / 70%);
+}
+
+.frame.is-out {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.frame-avatar {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.frame-avatar img {
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--pc);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.frame-token {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+}
+
+.frame-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.frame-name {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.frame-cash {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffd34d;
+}
+
+.frame-stats {
+  display: flex;
+  gap: 4px;
+  font-size: 9px;
+}
+
+/* Cột phải: nhật ký + đầu hàng */
+.land-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: var(--side);
+  padding: 4px;
+  background: rgb(10 16 32 / 88%);
+  color: #e8edf7;
+}
+
+.land-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.land-head .app-turn {
+  font-size: 11px;
+  filter: brightness(1.6);
+}
+
+.land .log {
+  flex: 1;
+  min-height: 0;
+  padding: 4px;
+  overflow-y: auto;
+  background: transparent;
+  border: 0;
+}
+
+.land .log-head h2 {
+  font-size: 12px;
+  color: #fff;
+}
+
+.land .log li {
+  font-size: 9.5px;
+  color: var(--ink);
+}
+
+.land .danger-row {
+  gap: 4px;
+}
+
+.land .danger-row .btn {
+  min-height: 30px;
+  padding: 4px;
+  font-size: 11px;
+}
+
+/* Màn phụ: đặt giữa bàn cờ */
+.land .sheet-backdrop {
+  position: absolute;
+  right: var(--side);
+  align-items: center;
+  background: rgb(5 10 20 / 45%);
+}
+
+.land .sheet {
+  height: auto;
+  max-width: min(480px, 92%);
+  max-height: 96%;
+  padding: 0;
+  background: transparent;
+}
+
+.land .sheet > .app-header {
+  display: none;
+}
+
+.land .sheet-card {
+  flex: 0 1 auto;
+}
+
+.land .sheet-head {
+  padding: 8px 12px 4px;
+}
+
+.land .sheet-title {
+  font-size: 16px;
+}
+
+.land .sheet-footer {
+  padding: 6px 12px 8px;
+}
