@@ -213,13 +213,13 @@
   width: 100%;
 }
 
+/* Tên kí hiệu dài ("Táo cắn dở", "Thỏ Playboy") xuống dòng thay vì bị cắt ở màn 360px */
 .setup-look-name {
   min-width: 0;
-  overflow: hidden;
   font-size: 13px;
   font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.15;
+  overflow-wrap: break-word;
 }
 
 .setup-change {
