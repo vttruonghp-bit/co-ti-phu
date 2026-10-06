@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { Ack, Action, GameState, Profile, RoomView, SeatTicket } from '@cotiphu/shared';
 import { getSocket, request, whenConnected, type GameSocket } from './socket';
 import { toGameState } from './view';
@@ -125,7 +126,9 @@ export function useOnline(): Online {
               };
         last.current = { json, view };
       }
-      setData({ room, view });
+      // Vẽ ngay từng trạng thái (không gộp hai trạng thái tới sát nhau), để màn ván không bỏ sót
+      // lá thẻ vừa rút khi người khác đi tiếp ngay sau đó.
+      flushSync(() => setData({ room, view }));
       for (const wake of waiters.current.splice(0)) wake();
     };
     const onClosed = (reason: string) => drop(reason || 'Phòng đã đóng.');
