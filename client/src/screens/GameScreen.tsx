@@ -77,11 +77,14 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   const meColor = colorOf(me.color);
   const pd = game.pending;
 
-  // Mỗi thao tác mới: về xem ô đang đứng, chưa xem thẻ nào, tắt lỗi cũ.
-  useEffect(() => {
+  // Mỗi thao tác mới: về xem ô đang đứng, chưa xem thẻ nào. Đặt lại ngay trong lần vẽ này
+  // (không đợi effect) để không lóe màn cũ hay hiện nhầm lá thẻ trong một khung hình.
+  const [seenAt, setSeenAt] = useState(actions);
+  if (seenAt !== actions) {
+    setSeenAt(actions);
     setViewTile(null);
     setCardsSeen(0);
-  }, [actions]);
+  }
   useEffect(() => {
     if (!error) return;
     const t = setTimeout(() => setError(null), 3500);
@@ -116,9 +119,8 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
   // Màn phụ: thẻ vừa rút trước, rồi tới việc ván đang chờ, rồi các màn người chơi tự mở.
   const debtor = debtorOf(game, previous);
   let sheet: ReactNode = null;
-  if (pd.type === 'ended') {
-    sheet = <GameOverSheet game={game} onNewGame={onNewGame} />;
-  } else if (pendingCard) {
+  // Thẻ làm phá sản vẫn hiện trước, rồi mới tới màn kết thúc.
+  if (pendingCard) {
     sheet = (
       <CardSheet
         {...sheetProps}
@@ -126,6 +128,8 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
         onContinue={() => setCardsSeen((n) => n + 1)}
       />
     );
+  } else if (pd.type === 'ended') {
+    sheet = <GameOverSheet game={game} onNewGame={onNewGame} />;
   } else if (manual === 'appearance') {
     sheet = <AppearanceSheet {...sheetProps} playerId={me.id} />;
   } else if (manual === 'surrender') {
@@ -218,63 +222,70 @@ export function GameScreen({ hotSeat, dispatch, onNewGame }: GameScreenProps) {
 
   return (
     <main className="phone game-screen" style={accentStyle}>
-      <header className="app-header">
-        <h1 className="app-title">CỜ TỶ PHÚ</h1>
-        <span className="app-turn" style={{ color: colorOf(cur.color).main }}>
-          Lượt {cur.name} · {money(cur.cash)}
-        </span>
-      </header>
+      {/* Khi màn phụ đang mở, màn chính phía sau không bấm hay đọc tới được. */}
+      <div className="game-main" inert={sheet !== null}>
+        <header className="app-header">
+          <h1 className="app-title">CỜ TỶ PHÚ</h1>
+          <span className="app-turn" style={{ color: colorOf(cur.color).main }}>
+            Lượt {cur.name} · {money(cur.cash)}
+          </span>
+        </header>
 
-      {me.id !== cur.id && pd.type !== 'ended' && (
-        <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
-          Chuyển máy cho <b>{me.name}</b>: {waitingText(game, me)}
-        </p>
-      )}
-
-      <PlayersBar game={game} />
-
-      <Board
-        game={game}
-        focus={viewTile ?? me.position}
-        onTileClick={(i) => setViewTile((v) => (v === i ? null : i))}
-      >
-        <CenterPanel
-          game={game}
-          me={me}
-          tile={viewTile ?? me.position}
-          viewing={viewTile !== null}
-          dice={dice}
-          diceColor={rollerColor}
-          rollKey={actions}
-        />
-      </Board>
-
-      <div className="btn-row action-bar">
-        {main ? (
-          <button type="button" className={`btn btn-grow ${main.tone}`} onClick={main.run}>
-            {main.label}
-          </button>
-        ) : (
-          <button type="button" className="btn btn-grow" disabled>
-            {waitingText(game, me)}
-          </button>
+        {me.id !== cur.id && pd.type !== 'ended' && (
+          <p className="handoff" style={{ background: meColor.soft, color: meColor.main }}>
+            Chuyển máy cho <b>{me.name}</b>: {waitingText(game, me)}
+          </p>
         )}
-        <button type="button" className={`btn ${secondary.tone}`} onClick={secondary.run}>
-          {secondary.label}
-        </button>
-      </div>
 
-      <LogPanel game={game} />
+        <PlayersBar game={game} />
 
-      <div className="btn-row danger-row">
-        <button type="button" className="btn btn-surrender" onClick={() => setManual('surrender')}>
-          ⚠ ĐẦU HÀNG
-        </button>
-        <button type="button" className="btn btn-denvl" onClick={() => setManual('appearance')}>
-          ĐEN VL
-        </button>
+        <Board
+          game={game}
+          focus={viewTile ?? me.position}
+          onTileClick={(i) => setViewTile((v) => (v === i ? null : i))}
+        >
+          <CenterPanel
+            game={game}
+            me={me}
+            tile={viewTile ?? me.position}
+            viewing={viewTile !== null}
+            dice={dice}
+            diceColor={rollerColor}
+            rollKey={actions}
+          />
+        </Board>
+
+        <div className="btn-row action-bar">
+          {main ? (
+            <button type="button" className={`btn btn-grow ${main.tone}`} onClick={main.run}>
+              {main.label}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-grow" disabled>
+              {waitingText(game, me)}
+            </button>
+          )}
+          <button type="button" className={`btn ${secondary.tone}`} onClick={secondary.run}>
+            {secondary.label}
+          </button>
+        </div>
+
+        <LogPanel game={game} />
+
+        <div className="btn-row danger-row">
+          <button
+            type="button"
+            className="btn btn-surrender"
+            onClick={() => setManual('surrender')}
+          >
+            ⚠ ĐẦU HÀNG
+          </button>
+          <button type="button" className="btn btn-denvl" onClick={() => setManual('appearance')}>
+            ĐEN VL
+          </button>
+        </div>
+        <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
       </div>
-      <p className="hint hint-center">Đầu hàng cần xác nhận · Đen vl mở bảng đổi kí hiệu.</p>
 
       {sheet}
       {error && (
@@ -318,7 +329,7 @@ function PlayersBar({ game }: { game: GameState }) {
   return (
     <section className="players" aria-label="Người chờ lượt">
       <p className="eyebrow">Người chờ lượt</p>
-      <div className="players-grid">
+      <div className={`players-grid${others.length <= 2 ? ' is-wide' : ''}`}>
         {others.map((p) => {
           const c = colorOf(p.color);
           return (
@@ -327,10 +338,10 @@ function PlayersBar({ game }: { game: GameState }) {
               className={`player-chip${p.status !== 'active' ? ' is-out' : ''}`}
               style={{ borderColor: `color-mix(in srgb, ${c.main} 35%, #dfe5ee)` }}
             >
-              <TokenIcon icon={p.icon} color={p.color} size={20} />
+              <TokenIcon icon={p.icon} color={p.color} size={18} />
               <span className="player-chip-text">
                 <span className="player-chip-top">
-                  <b>{p.name}</b>
+                  <b title={p.name}>{p.name}</b>
                   <span>{money(p.cash)}</span>
                 </span>
                 {/* "đất" như hình mẫu (gồm cả ga, nhà máy) để vừa 3 cột ở màn 360px */}
@@ -485,7 +496,9 @@ function CenterPanel({ game, me, tile, viewing, dice, diceColor, rollKey }: Cent
               <span>Tiền của {me.name} sau giao dịch</span>
               <b>
                 {money(me.cash)} <span aria-hidden="true">→</span>{' '}
-                <span className={after < me.cash ? 'down' : 'up'}>{money(after)}</span>
+                <span className={after < me.cash ? 'down' : 'up'}>
+                  {after < 0 ? `thiếu ${money(-after)}` : money(after)}
+                </span>
               </b>
             </div>
           )}

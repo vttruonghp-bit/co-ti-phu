@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   applyAction,
   createGame,
@@ -63,9 +63,12 @@ export interface HotSeat {
 
 export function useHotSeat(): HotSeat {
   const [current, setCurrent] = useState<HotSeatGame | null>(load);
+  // Bản mới nhất ngay sau mỗi thao tác: hai thao tác gửi liền nhau trong một lần bấm nối tiếp nhau.
+  const latest = useRef(current);
 
   const commit = useCallback((g: HotSeatGame | null) => {
     save(g);
+    latest.current = g;
     setCurrent(g);
   }, []);
 
@@ -85,27 +88,28 @@ export function useHotSeat(): HotSeat {
 
   const dispatch = useCallback(
     (action: Action) => {
-      if (!current) return 'Chưa có ván';
-      const result = applyAction(current.game, action, rngFor(current.seed, current.actions));
+      const cur = latest.current;
+      if (!cur) return 'Chưa có ván';
+      const result = applyAction(cur.game, action, rngFor(cur.seed, cur.actions));
       if (!result.ok) return result.error;
       commit({
-        ...current,
-        actions: current.actions + 1,
+        ...cur,
+        actions: cur.actions + 1,
         game: result.state,
-        previous: current.game,
+        previous: cur.game,
       });
       return null;
     },
-    [current, commit],
+    [commit],
   );
 
   const quit = useCallback(() => commit(null), [commit]);
 
-  const loadGame = useCallback(
-    (game: GameState) =>
-      setCurrent({ version: 1, seed: randomSeed(), actions: 1, game, previous: null }),
-    [],
-  );
+  const loadGame = useCallback((game: GameState) => {
+    const g: HotSeatGame = { version: 1, seed: randomSeed(), actions: 1, game, previous: null };
+    latest.current = g;
+    setCurrent(g);
+  }, []);
 
   return { current, start, dispatch, quit, load: loadGame };
 }

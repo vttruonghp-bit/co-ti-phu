@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
   BOARD,
   CHANCE_CARDS,
@@ -51,6 +51,11 @@ export function CardSheet({
   const draws = found.includes(event) ? found : [event];
   const k = draws.indexOf(event);
   const result = drawResults(game, previous, draws)[k]!;
+  // Lá thẻ kế tiếp hiện trong cùng màn: cuộn về đầu để thấy lá mới.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    bodyRef.current?.closest('.sheet-body')?.scrollTo({ top: 0 });
+  }, [event]);
   const drawer = playerById(game, event.playerId)!;
   const card = event.type === 'card' ? getCard(event.cardId) : null;
   const deck: DeckKind = card?.deck ?? 'community';
@@ -90,7 +95,12 @@ export function CardSheet({
         label={`Kết quả Cao tốc của ${drawer.name}`}
         footer={footer}
       >
-        <div className="draw-body" key={`h-${k}-${event.tile}-${event.die}`} style={whoStyle}>
+        <div
+          className="draw-body"
+          key={`h-${k}-${event.tile}-${event.die}`}
+          style={whoStyle}
+          ref={bodyRef}
+        >
           <HighwayView game={game} event={event} drawer={drawer} />
           <ResultBox game={game} result={result} card={null} drawer={drawer} />
         </div>
@@ -119,7 +129,7 @@ export function CardSheet({
       label={`Thẻ ${DECK_NAME[c.deck]}: ${c.title}`}
       footer={footer}
     >
-      <div className="draw-body" key={`c-${k}-${c.id}`} style={whoStyle}>
+      <div className="draw-body" key={`c-${k}-${c.id}`} style={whoStyle} ref={bodyRef}>
         <div className="draw-stage">
           <article className={`draw-card draw-card-${c.deck}`}>
             <div className="draw-card-top">
@@ -128,7 +138,7 @@ export function CardSheet({
               </span>
               <span className="draw-card-who">
                 <TokenIcon icon={drawer.icon} color={drawer.color} size={22} />
-                {drawer.name} rút
+                <span>{drawer.name} rút</span>
               </span>
             </div>
             <h3 className="draw-card-title">{c.title}</h3>
@@ -140,7 +150,13 @@ export function CardSheet({
         )}
         {moves.length > 0 && c.effect.type !== 'flyDice' && <Route moves={moves} jailed={jailed} />}
         <Explain game={game} card={c} drawer={drawer} result={result} />
-        <ResultBox game={game} result={result} card={c} drawer={drawer} />
+        <ResultBox
+          game={game}
+          result={result}
+          card={c}
+          drawer={drawer}
+          jailShown={jailed && moves.length > 0 && c.effect.type !== 'flyDice'}
+        />
       </div>
     </Sheet>
   );
@@ -219,7 +235,7 @@ function seatOrder(game: GameState, id: string): PlayerState[] {
 /**
  * Tách thao tác cuối theo từng lần rút. Nhật ký chỉ ghi tiền của người trả, nên khi có trạng thái
  * trước thao tác thì lần rút cuối lấy chênh lệch tiền thật của mọi người (gồm cả người nhận),
- * trừ phần đã ghi trước nó. Không có trạng thái trước (mới nạp ván) thì chỉ dựa vào nhật ký.
+ * trừ phần đã ghi trước nó. Không có trạng thái trước (mới nạp ván) thì dựa vào nhật ký.
  */
 function drawResults(game: GameState, previous: GameState | null, draws: Draw[]): DrawResult[] {
   const log = previous ? newEntries(game, previous) : game.log;
@@ -236,7 +252,9 @@ function drawResults(game: GameState, previous: GameState | null, draws: Draw[])
   const segments = draws.map((_, k) =>
     log.slice(starts[k]! + (marked[k] ? 1 : 0), starts[k + 1] ?? log.length),
   );
-  const deltas = segments.map(sumByPlayer);
+  const deltas = segments.map((seg, k) =>
+    previous ? sumByPlayer(seg) : addCredits(sumByPlayer(seg), game, draws[k]!, seg),
+  );
   const last = draws.length - 1;
   if (previous && last >= 0) {
     const earlier = sumByPlayer(log.slice(0, starts[last]));
@@ -275,6 +293,44 @@ function drawResults(game: GameState, previous: GameState | null, draws: Draw[])
       from,
     };
   });
+}
+
+/**
+ * Không có trạng thái trước (ván vừa nạp, ví dụ tình huống dev): nhật ký chỉ ghi người trả, nên
+ * cộng tiền cho người nhận theo loại thẻ. Ủng hộ người nghèo khi người rút trả thì không đoán được.
+ */
+function addCredits(
+  out: Map<string, number>,
+  game: GameState,
+  d: Draw,
+  entries: LogEntry[],
+): Map<string, number> {
+  if (d.type !== 'card') return out;
+  const card = getCard(d.cardId);
+  const e = card.effect;
+  const add = (id: string | null | undefined, v: number) => {
+    if (id && v) out.set(id, (out.get(id) ?? 0) + v);
+  };
+  const holder = entries.find((x) => x.text === 'Kẻ khóc người cười kích hoạt')?.playerId;
+  for (const x of entries) {
+    if (!x.playerId || !x.amount || x.amount > 0) continue;
+    const paid = -x.amount;
+    if (x.text === 'Kẻ khóc người cười') add(x.playerId === d.playerId ? holder : d.playerId, paid);
+    else if (x.text === 'Phạt Thằng Bờm') add(d.playerId, paid);
+    else if (x.text !== `Thẻ ${card.title}`) continue;
+    else if (x.playerId !== d.playerId) add(d.playerId, paid);
+    else if (e.type === 'payEach') {
+      for (const o of game.players) {
+        if (o.id !== d.playerId && o.status === 'active') add(o.id, e.amount);
+      }
+    } else if (e.type === 'buildingFee') {
+      const u = game.tiles[e.utilityIndex];
+      if (u?.owner && !u.mortgaged && u.owner !== d.playerId) {
+        add(u.owner, Math.floor((paid * e.ownerPercent) / 100));
+      }
+    }
+  }
+  return out;
 }
 
 /** Việc kế tiếp sau khi bấm Tiếp tục: lần rút sau, hoặc việc ván đang chờ. */
@@ -356,19 +412,24 @@ function ResultBox({
   result,
   card,
   drawer,
+  jailShown = false,
 }: {
   game: GameState;
   result: DrawResult;
   card: Card | null;
   drawer: PlayerState;
+  /** Phần Di chuyển đã ghi "Bị giam" nên bỏ dòng "Vào tù". */
+  jailShown?: boolean;
 }) {
   const notes = result.log.filter(
     (e) =>
       !SHOWN_ABOVE.some((re) => re.test(e.text)) &&
+      !(jailShown && e.text === 'Vào tù') &&
       (!card || (e.text !== card.title && e.text !== `Thẻ ${card.title}`)),
   );
   const held = card ? drawer.heldCards.some((h) => h.cardId === card.id) : false;
-  const empty = result.money.length === 0 && notes.length === 0 && !held;
+  // Không ai đổi tiền và không có gì thêm: phần trên đã đủ, bỏ hẳn khung Kết quả.
+  if (result.money.length === 0 && notes.length === 0 && !held) return null;
   return (
     <section className="draw-result" aria-label="Kết quả">
       <h4 className="eyebrow">Kết quả</h4>
@@ -393,26 +454,27 @@ function ResultBox({
         <ul className="draw-notes">
           {held && (
             <li>
-              <b style={{ color: colorOf(drawer.color).main }}>{drawer.name}</b> giữ thẻ này đến khi
-              dùng (đang giữ {drawer.heldCards.length} thẻ).
+              <span>
+                <b style={{ color: colorOf(drawer.color).main }}>{drawer.name}</b> giữ thẻ này đến
+                khi dùng (đang giữ {drawer.heldCards.length} thẻ).
+              </span>
             </li>
           )}
           {notes.map((e, i) => {
             const p = playerById(game, e.playerId);
             return (
               <li key={i}>
-                {p && <b style={{ color: colorOf(p.color).main }}>{p.name}</b>} {e.text}
+                <span>
+                  {p && <b style={{ color: colorOf(p.color).main }}>{p.name}</b>} {e.text}
+                </span>
                 {e.amount ? (
-                  <b className={`draw-note-amount ${e.amount > 0 ? 'up' : 'down'}`}>
-                    {signed(e.amount)}
-                  </b>
+                  <b className={e.amount > 0 ? 'up' : 'down'}>{signed(e.amount)}</b>
                 ) : null}
               </li>
             );
           })}
         </ul>
       )}
-      {empty && <p className="draw-empty">Không ai đổi tiền.</p>}
     </section>
   );
 }
@@ -538,7 +600,7 @@ function DiceDetail({ game, card, drawer, result, dice }: DetailProps & { dice: 
           <b>Ra {d}</b>
           <span>Nhận {money(e.payouts[d])} từ Ngân hàng</span>
         </DiceLine>
-        <ul className="draw-table">
+        <ul className="draw-table" style={{ ['--cols' as string]: groups.size }}>
           {[...groups].map(([amount, faces]) => (
             <li key={amount} className={faces.includes(d) ? 'is-hit' : undefined}>
               <span>{faces.join(' hoặc ')}</span>
@@ -937,11 +999,11 @@ function HighwayView({
           </div>
         </div>
       </div>
-      <ul className="draw-table">
+      <ul className="draw-table" style={{ ['--cols' as string]: outcomes.size }}>
         {[...outcomes].map(([n, faces]) => (
           <li key={n} className={faces.includes(event.die) ? 'is-hit' : undefined}>
             <span>{faces.join(' · ')}</span>
-            <b>{n > 0 ? `tiến ${n} ô` : 'đứng tại ô chọn'}</b>
+            <b>{n > 0 ? `${n} bước` : 'tại ô chọn'}</b>
           </li>
         ))}
       </ul>

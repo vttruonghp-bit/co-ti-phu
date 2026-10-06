@@ -4,9 +4,11 @@
  */
 import { seededRng, type GameState } from '@cotiphu/shared';
 import { act, at, fresh, mid, roll, sample, top } from './helpers';
+import { BOARD_SCENARIOS } from './scenarios-board';
 import { CARD_SCENARIOS } from './scenarios-cards';
 import { MANAGE_SCENARIOS } from './scenarios-manage';
 import { MOVE_SCENARIOS } from './scenarios-moves';
+import { QA_SCENARIOS } from './scenarios-qa';
 import { SETUP_SCENARIOS } from './scenarios-setup';
 
 const BASE: Record<string, () => GameState> = {
@@ -65,7 +67,9 @@ const BASE: Record<string, () => GameState> = {
 export const SCENARIOS: Record<string, () => GameState> = {
   ...BASE,
   ...SETUP_SCENARIOS,
+  ...BOARD_SCENARIOS,
   ...MANAGE_SCENARIOS,
   ...MOVE_SCENARIOS,
   ...CARD_SCENARIOS,
+  ...QA_SCENARIOS,
 };

@@ -53,7 +53,6 @@ export function SurrenderSheet({
 
   useEffect(() => {
     if (!final) return;
-    setReady(false);
     const t = setTimeout(() => setReady(true), FINAL_DELAY_MS);
     return () => clearTimeout(t);
   }, [final]);
@@ -73,6 +72,16 @@ export function SurrenderSheet({
       label={`Đầu hàng của ${p.name}`}
       footer={
         <div className="surrender-footer">
+          {blocked && (
+            <p className="surrender-blocked" role="status">
+              <b>Chưa đầu hàng được.</b> {blocked}
+            </p>
+          )}
+          {error && (
+            <p className="surrender-blocked" role="alert">
+              {error}
+            </p>
+          )}
           {final && !blocked && (
             <p className="surrender-final-hint" aria-live="polite">
               Bước cuối: bấm “Chắc chắn đầu hàng” để kết thúc ván.
@@ -109,7 +118,7 @@ export function SurrenderSheet({
         <span className="surrender-warn-kicker">
           <span aria-hidden="true">⚠</span> {final ? 'Bước cuối' : 'Cảnh báo'}
         </span>
-        <strong className="surrender-warn-title">{final ? 'CHẮC CHẮN CHƯA?' : 'ĐẦU HÀNG?'}</strong>
+        <strong className="surrender-warn-title">{final ? 'CHẮC CHƯA?' : 'ĐẦU HÀNG?'}</strong>
         <span className="surrender-warn-text">Quyết định này không hoàn tác.</span>
       </div>
 
@@ -140,21 +149,10 @@ export function SurrenderSheet({
         </ul>
       </section>
 
-      {blocked ? (
-        <p className="surrender-blocked" role="status">
-          <b>Chưa đầu hàng được.</b> {blocked}
-        </p>
-      ) : (
-        <p className="surrender-note">
-          Các hiệu ứng và thao tác đang chờ bị hủy. Chỉ đầu hàng được khi không có khoản bắt buộc
-          đang chờ.
-        </p>
-      )}
-      {error && (
-        <p className="surrender-blocked" role="alert">
-          {error}
-        </p>
-      )}
+      <p className="surrender-note">
+        Các hiệu ứng và thao tác đang chờ bị hủy. Chỉ đầu hàng được khi không có khoản bắt buộc đang
+        chờ.
+      </p>
     </Sheet>
   );
 }

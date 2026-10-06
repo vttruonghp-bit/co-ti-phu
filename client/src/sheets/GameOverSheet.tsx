@@ -32,7 +32,7 @@ function standings(game: GameState): Standing[] {
 /** Vì sao người thua thua: dòng chính và vài chi tiết lấy từ nhật ký, diễn biến cuối. */
 function loseReason(game: GameState, loser: PlayerState): { main: string; details: string[] } {
   if (loser.status === 'surrendered') {
-    return { main: `Đầu hàng ở lượt ${game.turnNumber}`, details: [] };
+    return { main: 'Đầu hàng', details: [`Tự đầu hàng ở lượt ${game.turnNumber}.`] };
   }
   const details: string[] = [];
   const debt = [...game.log]
@@ -98,10 +98,12 @@ export function GameOverSheet({ game, onNewGame }: { game: GameState; onNewGame:
           <div className="over-loser-head">
             <TokenIcon icon={loser.icon} color={loser.color} size={40} />
             <div className="over-loser-text">
-              <b>{loser.name}</b>
+              <span className="over-loser-name">
+                <b>{loser.name}</b>
+                <span className="over-loser-tag">{reason.main}</span>
+              </span>
               <strong>THUA CUỘC</strong>
             </div>
-            <span className="over-loser-tag">{reason.main}</span>
           </div>
           {reason.details.length > 0 && (
             <ul className="over-loser-why">

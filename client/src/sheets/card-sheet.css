@@ -59,6 +59,11 @@
   white-space: nowrap;
 }
 
+.draw-card-who > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .draw-card-title {
   margin: 2px 0 0;
   font-size: 22px;
@@ -190,10 +195,10 @@
   font-size: 15px;
 }
 
+/* Tên dài xuống dòng thay vì bị cắt */
 .draw-who b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.15;
+  overflow-wrap: break-word;
 }
 
 .draw-notes {
@@ -206,9 +211,8 @@
 
 .draw-notes li {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0 5px;
+  gap: 8px;
 }
 
 .draw-notes li::before {
@@ -216,14 +220,13 @@
   color: var(--muted);
 }
 
-.draw-note-amount {
-  margin-left: auto;
+.draw-notes li > span {
+  flex: 1;
+  min-width: 0;
 }
 
-.draw-empty {
-  margin: 0;
-  font-size: 14px;
-  color: var(--muted);
+.draw-notes li > b {
+  white-space: nowrap;
 }
 
 /* Đường đi của quân */
@@ -322,7 +325,7 @@
 
 .draw-table {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -530,7 +533,7 @@
 
 .draw-seats ol {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 6px;
 }
 
@@ -563,9 +566,9 @@
 
 .draw-seat-name {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: break-word;
   font-size: 12px;
   font-weight: 800;
 }
