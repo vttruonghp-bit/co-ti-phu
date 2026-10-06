@@ -122,16 +122,22 @@ function landOwnable(
 
   if (t.owner === p.id) {
     if (tile.kind === 'property') {
-      // Lượt vừa mua chưa được nâng (chuộc ga, nhà máy thì vẫn được).
-      if (t.boughtTurn === s.turnNumber) return none;
+      // Lượt vừa mua chưa được nâng; chuộc thì không phải nâng cấp nên vẫn được.
+      const justBought = t.boughtTurn === s.turnNumber;
       if (t.mortgaged) {
-        return p.cash >= redeemCost(tile.price) + tile.upgradeCost
-          ? {
-              steps: [{ type: 'upgrade', playerId: p.id, tile: index, mode: 'redeemBuild' }],
-              net: 0,
-            }
+        const redeem = redeemCost(tile.price);
+        // Đủ tiền thì chuộc + xây 1 nhà; chỉ đủ tiền chuộc thì chuộc riêng.
+        const mode =
+          !justBought && p.cash >= redeem + tile.upgradeCost
+            ? 'redeemBuild'
+            : p.cash >= redeem
+              ? 'redeem'
+              : null;
+        return mode
+          ? { steps: [{ type: 'upgrade', playerId: p.id, tile: index, mode }], net: 0 }
           : none;
       }
+      if (justBought) return none;
       return t.level < HOTEL_LEVEL && p.cash >= tile.upgradeCost
         ? { steps: [{ type: 'upgrade', playerId: p.id, tile: index, mode: 'build' }], net: 0 }
         : none;

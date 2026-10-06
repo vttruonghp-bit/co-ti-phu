@@ -88,4 +88,18 @@ describe('các lỗi đã sửa ở Bước 1', () => {
     expect(s.decks.community).toEqual([]);
     expect(player(s, 'a').heldCards).toEqual([]);
   });
+
+  it('đất màu của mình đang cắm, chỉ đủ tiền chuộc: được chuộc riêng (Wins chốt câu 1: B)', () => {
+    const s0 = own(setPlayer(newGame(), 'a', { cash: 40 }), 'a', 3, { mortgaged: true });
+    const s1 = roll(s0, 1, 2);
+    expect(s1.pending).toEqual({ type: 'upgrade', playerId: 'a', tile: 3, mode: 'redeem' });
+    const s = act(s1, { type: 'upgrade', playerId: 'a' });
+    expect(cash(s, 'a')).toBe(40 - 33);
+    expect(s.tiles[3]).toMatchObject({ owner: 'a', level: 0, mortgaged: false });
+  });
+
+  it('đủ tiền chuộc + xây thì vẫn là chuộc + xây 1 nhà', () => {
+    const s0 = own(setPlayer(newGame(), 'a', { cash: 83 }), 'a', 3, { mortgaged: true });
+    expect(roll(s0, 1, 2).pending).toMatchObject({ mode: 'redeemBuild' });
+  });
 });

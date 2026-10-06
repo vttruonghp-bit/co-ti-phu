@@ -1,0 +1,304 @@
+.game-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-screen .app-header {
+  margin-bottom: 0;
+}
+
+.handoff {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Người chờ lượt: tối đa 5 người, 3 cột, mỗi người 2 dòng */
+.players .eyebrow {
+  margin-bottom: 4px;
+}
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.player-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.player-chip.is-out {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.player-chip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.player-chip-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.player-chip-top b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-chip-top span {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.player-chip-sub {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Ô trung tâm bàn cờ */
+.center {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  min-height: 0;
+}
+
+.center-turn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+}
+
+.center-turn-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.center-turn-label {
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.center-turn-cash {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.center-turn-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.center-tile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  padding: 2px 4px 0;
+}
+
+.center-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 26px;
+}
+
+.center-tile-head .eyebrow {
+  font-size: 9px;
+}
+
+.center-tile-name {
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(16px, 5.4vw, 22px);
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.center-tile-owner {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.center-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #f4f1fa;
+}
+
+.center-info div {
+  display: flex;
+  flex-direction: column;
+}
+
+.center-info .eyebrow {
+  font-size: 8.5px;
+}
+
+.center-info b {
+  font-size: 14px;
+}
+
+.center-info .right {
+  align-items: flex-end;
+}
+
+.center-after {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #f6f8fb;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.center-after b {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+/* Hàng nút chính */
+.action-bar .btn {
+  min-height: 52px;
+}
+
+.hint {
+  margin: -2px 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hint.center {
+  text-align: center;
+}
+
+/* Lịch sử giao dịch */
+.log {
+  padding: 10px 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.log-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.log-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.log-head span {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.log ol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.log li b {
+  flex: none;
+}
+
+.log-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-amount {
+  flex: none;
+  font-weight: 800;
+}
+
+.log-empty {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+/* Đầu hàng / Đen vl */
+.danger-row {
+  margin-top: 4px;
+}
+
+.btn.btn-surrender {
+  background: #6b1a24;
+  border: 2px solid #d64552;
+  letter-spacing: 0.04em;
+}
+
+.btn.btn-denvl {
+  background: #2e1b55;
+  border: 2px solid #7b5bd6;
+  letter-spacing: 0.04em;
+}
